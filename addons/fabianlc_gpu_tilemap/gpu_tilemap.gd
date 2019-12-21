@@ -73,7 +73,7 @@ func set_tile_size(sz):
 
 func set_tileset_texture(tex):
 	tileset = tex
-	if tex != null:
+	if tex != null && tex is ImageTexture:
 		tileset_data = tex.data
 	if !is_inside_tree():
 		return
@@ -165,7 +165,7 @@ func get_tile_at_cell(cell):
 	return t	
 	
 func get_map_region_as_texture(start,end):
-	if map == null || tileset == null:
+	if map == null || tileset == null || !(tileset is ImageTexture):
 		return null
 		
 	var data:Image
