@@ -210,7 +210,7 @@ func get_map_region_as_texture(start,end):
 			p = cs + Vector2(x,y)
 			if p.x >= 0 && p.x < mw && p.y >= 0 && p.y < mh:
 				var col = data.get_pixelv(p)
-				img.blit_rect(tdata,Rect2(int(col.r*255),int(col.g*255),tile_size,tile_size),x*tile_size,y*tile_size)
+				img.blit_rect(tdata,Rect2(int(col.r*255)*tile_size,int(col.g*255)*tile_size,tile_size,tile_size),x*tile_size,y*tile_size)
 								
 			y += 1
 		x += 1	
