@@ -1,0 +1,49 @@
+[gd_scene load_steps=4 format=2]
+
+[ext_resource path="res://spelunky-tiles.png" type="Texture" id=1]
+[ext_resource path="res://addons/fabianlc_gpu_tilemap/scenes/tilepicker.gd" type="Script" id=2]
+[ext_resource path="res://addons/fabianlc_gpu_tilemap/scenes/tlepicker_selected_cell.gd" type="Script" id=3]
+
+[node name="TilePicker" type="VBoxContainer"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+focus_mode = 2
+size_flags_stretch_ratio = 0.25
+script = ExtResource( 2 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="."]
+margin_right = 256.0
+margin_bottom = 14.0
+text = "Tileset"
+align = 1
+valign = 1
+
+[node name="HSeparator" type="HSeparator" parent="."]
+margin_top = 18.0
+margin_right = 256.0
+margin_bottom = 22.0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="."]
+margin_top = 26.0
+margin_right = 256.0
+margin_bottom = 240.0
+focus_mode = 2
+mouse_filter = 1
+size_flags_horizontal = 3
+size_flags_vertical = 3
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Tileset" type="TextureRect" parent="ScrollContainer"]
+margin_right = 256.0
+margin_bottom = 214.0
+focus_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+texture = ExtResource( 1 )
+stretch_mode = 5
+script = ExtResource( 3 )
