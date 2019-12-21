@@ -10,7 +10,7 @@ The maximum map size should be 1024x1024 tiles, this is because
 older devices might not support bigger textures, however you can add another tilemap node if you need more.
 
 
-Te maximum tileset size is 256x256(65536) tiles, this should be enough in most cases.
+The maximum tileset size is 256x256(65536) tiles, this should be enough in most cases.
 
 
 Performance
