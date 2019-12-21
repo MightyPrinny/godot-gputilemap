@@ -22,5 +22,7 @@ should be faster than the default tilemap node or just as fast depending on the 
 If the stretch mode is set to viewport and the game is not hd performance will always be good.
 
 Notes:
+
 -This was tested on an old integrated intel gpu.
+
 -I forgot to add an option to export the map to a png, I'll do that soon.
