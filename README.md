@@ -21,3 +21,6 @@ tilemap will render super fast if the window is small and will take more if the 
 should be faster than the default tilemap node or just as fast depending on the window size and the gpu.
 If the stretch mode is set to viewport and the game is not hd performance will always be good.
 
+Notes:
+-This was tested on an old integrated intel gpu.
+-I forgot to add an option to export the map to a png, I'll do that soon.
