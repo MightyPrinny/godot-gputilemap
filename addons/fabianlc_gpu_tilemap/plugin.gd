@@ -146,7 +146,6 @@ func brush_from_selection():
 		print("Copy to brush")
 
 func _exit_tree():
-	# Make sure we release all references to edited stuff
 	edit(null)
 #	resize_dialog.queue_free()
 	clear_map_dialog.queue_free()
@@ -184,6 +183,9 @@ func _process(delta):
 	if is_instance_valid(tilemap):
 		if tilemap.get_rect().has_point(tilemap.get_local_mouse_position()):
 			mouse_over = true
+			if Input.is_mouse_button_pressed(BUTTON_LEFT):
+				mouse_pressed = true
+				prev_mouse_cell_pos = tilemap.local_to_cell(tilemap.get_local_mouse_position())
 		else:
 			mouse_over = false
 			if selection_state == Selecting:
@@ -193,6 +195,11 @@ func _process(delta):
 			
 			if mouse_pressed:
 				mouse_pressed = false
+				if making_action:
+					if paint_mode == EditModePaint:
+						end_undoredo("Paint tiles")
+					elif paint_mode == EditModeErase:
+						end_undoredo("Erase tiles")
 	
 #Input handling
 func forward_canvas_gui_input(event):

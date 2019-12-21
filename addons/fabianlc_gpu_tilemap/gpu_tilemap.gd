@@ -9,6 +9,7 @@ export var basic_culling = false
 export var cached_image_data = true setget set_cached_image_data
 
 var image_data:Image
+var tileset_data:Image
 
 var shader_mat:ShaderMaterial
 var draw_editor_selection = false
@@ -72,8 +73,11 @@ func set_tile_size(sz):
 
 func set_tileset_texture(tex):
 	tileset = tex
+	if tex != null:
+		tileset_data = tex.data
 	if !is_inside_tree():
 		return
+	
 	if is_instance_valid(tile_selector) && tile_selector.visible:
 		tile_selector.tileset.set_tex(tileset)
 		tile_selector.tileset.set_selection(Vector2(0,0),Vector2(0,0))
@@ -143,6 +147,79 @@ func put_tile(cell,tilepos,alpha = 255):
 	data.set_pixelv(cell,Color8(tilepos.x,tilepos.y,0,alpha))
 	data.unlock()
 	map.set_data(data)
+	
+func get_tile_at_cell(cell):
+	if map == null:
+		return Vector2(0,0)
+	var	data:Image
+	if cached_image_data:
+		data = image_data
+	else:
+		data = map.get_data()
+	data.lock()
+	var t = Vector2()
+	if cell.x >= 0 && cell.x < data.get_width() && cell.y >= 0 && cell.y < data.get_height():
+		var	c = data.get_pixelv(cell)
+		t = Vector2(int(c.r*255),int(c.g*255))
+	data.unlock()
+	return t	
+	
+func get_map_region_as_texture(start,end):
+	if map == null || tileset == null:
+		return null
+		
+	var data:Image
+	if cached_image_data:
+		data = image_data
+	else:
+		data = map.get_data()
+	data.lock()
+	
+	var cs = Vector2(min(start.x,end.x),min(start.y,end.y))
+	var ce = Vector2(max(start.x,end.x),max(end.y,start.y))
+	cs.x = clamp(cs.x,0,map_size.x-1)
+	cs.y = clamp(cs.y,0,map_size.y-1)
+	ce.x = clamp(ce.x,0,map_size.x-1)
+	ce.y = clamp(ce.y,0,map_size.y-1)
+	var rect = Rect2(cell_start,Vector2(1,1)).expand(cell_end+Vector2(1,1))
+	var w = rect.size.x
+	var h = rect.size.y
+	var mw = data.get_width()
+	var mh = data.get_height()
+	var c
+	var p
+	
+	var tex = ImageTexture.new()
+	var img = Image.new()
+	img.create(w*tile_size,h*tile_size,false,Image.FORMAT_RGBA8)
+	img.lock()
+	
+	var tdata:Image
+	if cached_image_data:
+		data = tileset_data
+	else:
+		data = tileset.get_data()
+	
+	tdata.lock()
+	
+	var x = 0
+	var y = 0
+	while(x<w):
+		y = 0
+		while(y<h):
+			p = cs + Vector2(x,y)
+			if p.x >= 0 && p.x < mw && p.y >= 0 && p.y < mh:
+				var col = data.get_pixelv(p)
+				img.blit_rect(tdata,Rect2(int(col.r*255),int(col.g*255),tile_size,tile_size),x*tile_size,y*tile_size)
+								
+			y += 1
+		x += 1	
+		
+	img.unlock()
+	data.ulock()
+	tdata.unlock()
+	tex.set_data(img)
+	return tex
 	
 #Brush must be locked
 func erase_with_brush(cell,brush:Image):
