@@ -3,9 +3,9 @@ extends TextureRect
 
 var cell_size:int = 16
 var cell_start = Vector2()
-var cell_end = Vector2()
+var cell_end = Vector2(1,1)
 
-var tileset_size
+var tileset_size = Vector2(1,1)
 
 func _ready():
 	set_tex(texture)
@@ -24,6 +24,8 @@ func set_selection(start,end):
 	update()
 	
 func update_tieset_size():
+	if texture == null:
+		return
 	tileset_size = (texture.get_size()/Vector2(cell_size,cell_size)).floor()
 	set_selection(cell_start,cell_end)
 	
@@ -33,6 +35,8 @@ func set_cell_size(size:int):
 	update()
 	
 func get_cell_poss_at(pos):
+	if texture == null:
+		return
 	var scale = min(get_global_rect().size.y/float(texture.get_height()), get_global_rect().size.x/float(texture.get_width()))
 	var local = pos
 	var cs = cell_size * scale
@@ -41,6 +45,8 @@ func get_cell_poss_at(pos):
 	return local
 	
 func _draw():
+	if texture == null:
+		return
 	var scale = min(get_global_rect().size.y/float(texture.get_height()), get_global_rect().size.x/float(texture.get_width()))
 	var rect = Rect2(cell_start*cell_size*scale,Vector2(cell_size,cell_size)*scale).expand(cell_end*cell_size*scale+Vector2(cell_size,cell_size)*scale)
 	draw_rect(rect,Color.white,false,1.0,false) 

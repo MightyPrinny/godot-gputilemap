@@ -164,9 +164,10 @@ func _exit_tree():
 func edit(object):
 	print("Edit ", object)
 	if object != null:
-		tile_picker.tileset.set_tex(object.tileset)
-		tile_picker.tileset.set_selection(Vector2(0,0),Vector2(0,0))
-		tile_picker.update_plugin_brush()
+		if tile_picker.tileset != null:
+			tile_picker.tileset.set_tex(object.tileset)
+			tile_picker.tileset.set_selection(Vector2(0,0),Vector2(0,0))
+			tile_picker.update_plugin_brush()
 		
 		tilemap = object
 		tilemap.plugin = self
@@ -177,7 +178,7 @@ func edit(object):
 		
 	
 func handles(object):
-	return object is GPUTileMap
+	return object is GPUTileMap && object.map != null && object.tileset != null && object.tile_size > 0
 	
 func _process(delta):
 	if is_instance_valid(tilemap):

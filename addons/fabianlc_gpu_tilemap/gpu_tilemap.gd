@@ -4,7 +4,7 @@ class_name GPUTileMap
 
 export var tileset:Texture setget set_tileset_texture
 export var map:ImageTexture setget set_map_texture
-export var tile_size:int
+export var tile_size:int = 16 setget set_tile_size
 export var basic_culling = false
 export var cached_image_data = true setget set_cached_image_data
 
@@ -41,9 +41,10 @@ func _enter_tree():
 	
 	var size
 	#I thought that it would be faster if I adjusted the view offset and size but performance is litterally the same
-	size = map.get_size()*tile_size
-	shader_mat.set_shader_param("viewportSize",size)
-	rect_size = size
+	if map != null:
+		size = map.get_size()*tile_size
+		shader_mat.set_shader_param("viewportSize",size)
+		rect_size = size
 
 	set_process(false)
 
@@ -53,9 +54,22 @@ func update_shader():
 	shader_mat.set_shader_param("tilemap",map)
 	#shader_mat.set_shader_param("viewportSize",get_viewport_rect().size)
 	shader_mat.set_shader_param("tileset",tileset)
-	shader_mat.set_shader_param("inverseTileTextureSize",Vector2(1.0,1.0)/tileset.get_size())
-	shader_mat.set_shader_param("inverseSpriteTextureSize",Vector2(1.0,1.0)/map.get_size())
+	if tileset != null:
+		shader_mat.set_shader_param("inverseTileTextureSize",Vector2(1.0,1.0)/tileset.get_size())
+	if map != null:
+		shader_mat.set_shader_param("inverseSpriteTextureSize",Vector2(1.0,1.0)/map.get_size())
 	
+func set_tile_size(sz):
+	tile_size = max(1,sz)
+	if !is_inside_tree():
+		return
+	if plugin != null:
+		if is_instance_valid(plugin.tile_picker):
+			var ts = plugin.tile_picker.tileset
+			ts.cell_size = sz
+			ts.update()
+	update_shader()	
+
 func set_tileset_texture(tex):
 	tileset = tex
 	if !is_inside_tree():
@@ -70,7 +84,7 @@ func set_map_texture(tex:ImageTexture):
 	map = tex
 	if map != null:
 		map_size = map.get_size()
-	if cached_image_data:
+	if cached_image_data && tex != null:
 		image_data = tex.get_data()
 	if !is_inside_tree():
 		return
@@ -286,6 +300,8 @@ func delete_tile_at_mouse():
 	put_tile_at_mouse(Vector2(),0)
 	
 func local_to_cell(global_pos):
+	if map == null:
+		return
 	var ts = Vector2(tile_size,tile_size)
 	var pos = (global_pos/ts).floor()
 	pos = Vector2(clamp(pos.x,0,map.get_width()-1),clamp(pos.y,0,map.get_height()-1))

@@ -41,6 +41,7 @@ func update_plugin_brush():
 	var selection_size = (tileset.cell_end+Vector2(1,1)) - selection_start_cell
 	if(selection_size.x <= 0 || selection_size.y <= 0):
 		print("tileset selection is invalid")
+		return
 	else:
 		print(selection_size)
 		
