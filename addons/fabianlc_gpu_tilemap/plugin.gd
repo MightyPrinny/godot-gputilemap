@@ -9,8 +9,11 @@ const MaxMapSize = 1024 #1024x1024 textures should be safe to use on old devices
 
 var tile_picker_scene = load("res://addons/fabianlc_gpu_tilemap/scenes/tilepicker.tscn")
 var tile_picker
-var resize_dialog_scene = load("res://addons/fabianlc_gpu_tilemap/scenes/resize_map_dialog.tscn")
-var resize_dialog
+#var resize_dialog_scene = load("res://addons/fabianlc_gpu_tilemap/scenes/resize_map_dialog.tscn")
+#var resize_dialog
+var clear_map_dialog_scene = load("res://addons/fabianlc_gpu_tilemap/scenes/clear_map_dialog.tscn")
+var clear_map_dialog
+
 
 var paint_mode = EditModePaint
 
@@ -72,9 +75,13 @@ func _enter_tree():
 	add_control_to_container(EditorPlugin.CONTAINER_CANVAS_EDITOR_MENU, toolbar)
 	toolbar.hide()
 	
-	resize_dialog = resize_dialog_scene.instance()
-	get_editor_interface().get_base_control().add_child(resize_dialog)
-	resize_dialog.connect("confirmed",self,"resize_dialog_confirmed")
+#	resize_dialog = resize_dialog_scene.instance()
+#	get_editor_interface().get_base_control().add_child(resize_dialog)
+#	resize_dialog.connect("confirmed",self,"resize_dialog_confirmed")
+	clear_map_dialog = clear_map_dialog_scene.instance()
+	get_editor_interface().get_base_control().add_child(clear_map_dialog)
+	clear_map_dialog.connect("confirmed",self,"clear_map")
+	
 	
 	var lbl = Label.new()
 	lbl.text = "mode"
@@ -90,7 +97,7 @@ func _enter_tree():
 	var popup_menu = PopupMenu.new()
 	options_popup = popup_menu
 	popup_menu.add_item("clear map",0,0)
-	popup_menu.add_item("resize map",1,0)
+#	popup_menu.add_item("resize map",1,0)
 	popup_menu.connect("id_pressed",self,"popup_option_selected")
 	
 	var tool_button = ToolButton.new()
@@ -107,8 +114,8 @@ func _enter_tree():
 	tool_button.text = "selection"
 	popup_menu.add_item("copy to brush",0)
 	popup_menu.add_item("delete",1)
-	popup_menu.add_shortcut(delete_shortcut,1)
-	popup_menu.add_shortcut(copy_shortcut,0)
+	popup_menu.set_item_shortcut(1,delete_shortcut)
+	popup_menu.set_item_shortcut(0,copy_shortcut)
 	popup_menu.connect("id_pressed",self,"selection_item_selected")
 	tool_button.add_child(popup_menu)
 	tool_button.connect("pressed",self,"show_selection_popup")
@@ -141,7 +148,8 @@ func brush_from_selection():
 func _exit_tree():
 	# Make sure we release all references to edited stuff
 	edit(null)
-	resize_dialog.queue_free()
+#	resize_dialog.queue_free()
+	clear_map_dialog.queue_free()
 	toolbar.queue_free()
 	toolbar = null
 	
@@ -321,34 +329,34 @@ func add_do_tile_action(cell,prev_color,new_color):
 	
 func popup_option_selected(id):
 	if id == 0:
-		clear_map()
-	elif id == 1:
-		resize_map()
+		clear_map_dialog.popup_centered()
+#	elif id == 1:
+#		resize_map()
 	
 func clear_map():
 	tilemap.clear_map()
 	
-func resize_map():
-	if !is_instance_valid(tilemap) || !is_instance_valid(tilemap.map):
-		return
-	var spin_w:SpinBox = resize_dialog.get_node("V/H/Width")
-	var spin_h:SpinBox = resize_dialog.get_node("V/H/Height")
-	spin_w.max_value = MaxMapSize
-	spin_h.max_value = MaxMapSize
-	spin_w.min_value = 0
-	spin_h.min_value = 0
-	spin_h.value = tilemap.map.get_height()
-	spin_w.value = tilemap.map.get_width()
-	resize_dialog.popup_centered()
+#func resize_map():
+#	if !is_instance_valid(tilemap) || !is_instance_valid(tilemap.map):
+#		return
+#	var spin_w:SpinBox = resize_dialog.get_node("V/H/Width")
+#	var spin_h:SpinBox = resize_dialog.get_node("V/H/Height")
+#	spin_w.max_value = MaxMapSize
+#	spin_h.max_value = MaxMapSize
+#	spin_w.min_value = 0
+#	spin_h.min_value = 0
+#	spin_h.value = tilemap.map.get_height()
+#	spin_w.value = tilemap.map.get_width()
+#	resize_dialog.popup_centered()
 
-func resize_dialog_confirmed():
-	if !is_instance_valid(tilemap) || !is_instance_valid(tilemap.map):
-		return
-	var spin_w:SpinBox = resize_dialog.get_node("V/H/Width")
-	var spin_h:SpinBox = resize_dialog.get_node("V/H/Height")
-	var w = spin_w.value
-	var h = spin_h.value
-	tilemap.set_map_size(w,h)
+#func resize_dialog_confirmed():
+#	if !is_instance_valid(tilemap) || !is_instance_valid(tilemap.map):
+#		return
+#	var spin_w:SpinBox = resize_dialog.get_node("V/H/Width")
+#	var spin_h:SpinBox = resize_dialog.get_node("V/H/Height")
+#	var w = spin_w.value
+#	var h = spin_h.value
+#	tilemap.set_map_size(w,h)
 		
 func paint_line(start,end,erase = false):
 	var x0 = start.x
