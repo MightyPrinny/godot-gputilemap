@@ -19,10 +19,5 @@ The time it takes to render the tilemap depends on the amout of pixels rendered 
 rendering the whole map zoomed out or just a portion of it is the same, when the stretch mode is set to 2D the
 tilemap will render super fast if the window is small and will take more if the window is huge, that still
 should be faster than the default tilemap node or just as fast depending on the window size and the gpu.
-If the stretch mode is set to viewport and the game is not hd performance will always be good.
+If the stretch mode is set to viewport and the game is not hd performance will always be good on old computers.
 
-Notes:
-
--This was tested on an old integrated intel gpu.
-
--I forgot to add an option to export the map to a png, I'll do that soon.
