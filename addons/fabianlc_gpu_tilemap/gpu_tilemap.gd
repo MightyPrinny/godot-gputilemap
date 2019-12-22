@@ -5,8 +5,8 @@ class_name GPUTileMap
 export var tileset:Texture setget set_tileset_texture
 export var map:ImageTexture setget set_map_texture
 export var tile_size:int = 16 setget set_tile_size
-export var basic_culling = false
-export var cached_image_data = true setget set_cached_image_data
+var basic_culling = false
+var cached_image_data = true setget set_cached_image_data
 
 var image_data:Image
 var tileset_data:Image
