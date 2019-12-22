@@ -5,15 +5,30 @@ extends EditorPlugin
 const EditModePaint = 0
 const EditModeErase = 1
 const EditModeSelect = 2
+
+const ResizeMap = 0
+const ClearMap = 1
+const NewMap = 2
+
+const SaveBrush = 0
+const LoadBrush = 1
+const SaveMap = 2
+const LoadMap = 3
+const ExportMap = 4
+const ImportTiled = 5
+
+
 const MaxMapSize = 1024 #1024x1024 textures should be safe to use on old devices
 
 var tile_picker_scene = load("res://addons/fabianlc_gpu_tilemap/scenes/tilepicker.tscn")
 var tile_picker
-#var resize_dialog_scene = load("res://addons/fabianlc_gpu_tilemap/scenes/resize_map_dialog.tscn")
-#var resize_dialog
+var resize_dialog_scene = load("res://addons/fabianlc_gpu_tilemap/scenes/resize_map_dialog.tscn")
+var resize_dialog
+var new_map_dialog_scene = load("res://addons/fabianlc_gpu_tilemap/scenes/new_map_dialog.tscn")
+var new_map_dialog
 var clear_map_dialog_scene = load("res://addons/fabianlc_gpu_tilemap/scenes/clear_map_dialog.tscn")
 var clear_map_dialog
-
+var import_tiled_map_scene = load("res://addons/fabianlc_gpu_tilemap/scenes/import_tiled_map_dialog.tscn")
 
 var paint_mode = EditModePaint
 
@@ -26,6 +41,7 @@ var mouse_pressed = false
 var prev_mouse_cell_pos  = Vector2()
 var options_popup:PopupMenu
 var selection_popup:PopupMenu
+var file_popup:PopupMenu
 var brush:Image
 var tile_size = Vector2()
 
@@ -52,6 +68,8 @@ var making_action = false
 var delete_shortcut:ShortCut
 var copy_shortcut:ShortCut
 
+var ignore_next_click = false
+
 # Called when the node enters the scene tree for the first time.
 func _init():
 	delete_shortcut = ShortCut.new()
@@ -75,18 +93,18 @@ func _enter_tree():
 	add_control_to_container(EditorPlugin.CONTAINER_CANVAS_EDITOR_MENU, toolbar)
 	toolbar.hide()
 	
-#	resize_dialog = resize_dialog_scene.instance()
-#	get_editor_interface().get_base_control().add_child(resize_dialog)
-#	resize_dialog.connect("confirmed",self,"resize_dialog_confirmed")
+	new_map_dialog = new_map_dialog_scene.instance()
+	get_editor_interface().get_base_control().add_child(new_map_dialog)
+	new_map_dialog.connect("confirmed",self,"new_map")
 	clear_map_dialog = clear_map_dialog_scene.instance()
 	get_editor_interface().get_base_control().add_child(clear_map_dialog)
 	clear_map_dialog.connect("confirmed",self,"clear_map")
+	resize_dialog = resize_dialog_scene.instance()
+	get_editor_interface().get_base_control().add_child(resize_dialog)
+	resize_dialog.connect("confirmed",self,"resize_map")
 	
 	
-	var lbl = Label.new()
-	lbl.text = "mode"
-	toolbar.add_child(lbl)
-	
+	var lbl
 	paint_mode_option = OptionButton.new()
 	paint_mode_option.add_item("paint",EditModePaint)
 	paint_mode_option.add_item("erase",EditModeErase)
@@ -96,12 +114,13 @@ func _enter_tree():
 	
 	var popup_menu = PopupMenu.new()
 	options_popup = popup_menu
-	popup_menu.add_item("clear map",0,0)
-#	popup_menu.add_item("resize map",1,0)
+	popup_menu.add_item("resize map", ResizeMap)
+	popup_menu.add_item("clear map",ClearMap)
+	popup_menu.add_item("new map",NewMap)
 	popup_menu.connect("id_pressed",self,"popup_option_selected")
 	
 	var tool_button = ToolButton.new()
-	tool_button.text = "options"
+	tool_button.text = "Options"
 	tool_button.connect("pressed",self,"show_option_popup")
 	
 	toolbar.add_child(tool_button)
@@ -109,9 +128,25 @@ func _enter_tree():
 	tool_button.add_child(popup_menu)
 	
 	popup_menu = PopupMenu.new()
+	tool_button = ToolButton.new()
+	file_popup = popup_menu
+	tool_button.text = "File"
+	tool_button.add_child(popup_menu)
+	tool_button.connect("pressed",self,"show_file_popup")
+	toolbar.add_child(tool_button)
+	popup_menu.add_item("save brush",SaveBrush)
+	popup_menu.add_item("load brush",LoadBrush)
+	popup_menu.add_item("save map to file",SaveMap)
+	popup_menu.add_item("load map from file",LoadMap)
+	popup_menu.add_item("export map to image",ExportMap)
+	popup_menu.add_item("import tiled json",ImportTiled)
+	popup_menu.connect("id_pressed",self,"file_option_selected")
+	
+	
+	popup_menu = PopupMenu.new()
 	selection_popup = popup_menu
 	tool_button = ToolButton.new()
-	tool_button.text = "selection"
+	tool_button.text = "Selection"
 	popup_menu.add_item("copy to brush",0)
 	popup_menu.add_item("delete",1)
 	popup_menu.set_item_shortcut(1,delete_shortcut)
@@ -128,12 +163,17 @@ func _enter_tree():
 	
 func show_option_popup():
 	options_popup.popup()
-	options_popup.set_global_position( options_popup.get_parent().get_global_rect().position)
+	options_popup.set_global_position( options_popup.get_parent().get_global_rect().position + Vector2(8,8))
 	
 func show_selection_popup():
 	selection_popup.popup()
-	selection_popup.set_global_position( selection_popup.get_parent().get_global_rect().position)
+	selection_popup.set_global_position( selection_popup.get_parent().get_global_rect().position + Vector2(8,8))
 	
+func show_file_popup():
+	file_popup.popup()
+	file_popup.set_global_position( file_popup.get_parent().get_global_rect().position + Vector2(8,8))
+	
+
 func selection_item_selected(id):
 	if id == 0:#Copy to brush
 		brush_from_selection()
@@ -146,9 +186,9 @@ func brush_from_selection():
 		print("Copy to brush")
 
 func _exit_tree():
-	edit(null)
-#	resize_dialog.queue_free()
 	clear_map_dialog.queue_free()
+	new_map_dialog.queue_free()
+	resize_dialog.queue_free()
 	toolbar.queue_free()
 	toolbar = null
 	
@@ -183,9 +223,7 @@ func _process(delta):
 	if is_instance_valid(tilemap):
 		if tilemap.get_rect().has_point(tilemap.get_local_mouse_position()):
 			mouse_over = true
-			if Input.is_mouse_button_pressed(BUTTON_LEFT):
-				mouse_pressed = true
-				prev_mouse_cell_pos = tilemap.local_to_cell(tilemap.get_local_mouse_position())
+			
 		else:
 			mouse_over = false
 			if selection_state == Selecting:
@@ -194,12 +232,7 @@ func _process(delta):
 				tilemap.draw_clear()
 			
 			if mouse_pressed:
-				mouse_pressed = false
-				if making_action:
-					if paint_mode == EditModePaint:
-						end_undoredo("Paint tiles")
-					elif paint_mode == EditModeErase:
-						end_undoredo("Erase tiles")
+				release_mouse()
 	
 #Input handling
 func forward_canvas_gui_input(event):
@@ -207,7 +240,11 @@ func forward_canvas_gui_input(event):
 		return false
 	if !mouse_over :
 		return false
+	
 	if event is InputEventMouse:
+		if !mouse_pressed && Input.is_mouse_button_pressed(BUTTON_LEFT):
+			mouse_pressed = true
+			prev_mouse_cell_pos = tilemap.local_to_cell(tilemap.get_local_mouse_position())
 		var draw = false
 		var mouse_cell_pos = tilemap.local_to_cell(tilemap.get_local_mouse_position())
 		if event is InputEventMouseMotion:
@@ -242,7 +279,6 @@ func forward_canvas_gui_input(event):
 							selection_state = Selecting
 							selection_start_cell = mouse_cell_pos
 		if mouse_pressed:
-			#TO DO, ADD BRUSHES AND RECTANGLE SELECTION TOOL
 			if paint_mode == EditModeErase:
 				if !making_action:
 					begin_undoredo()
@@ -252,7 +288,6 @@ func forward_canvas_gui_input(event):
 					brush.lock()
 					tilemap.erase_with_brush(mouse_cell_pos,brush)
 					brush.unlock()
-				#end_undoredo("Erase tile")
 				
 			elif paint_mode == EditModePaint:
 				if !making_action:
@@ -263,8 +298,6 @@ func forward_canvas_gui_input(event):
 					brush.lock()
 					tilemap.blend_brush(mouse_cell_pos,brush)
 					brush.unlock()
-				#end_undoredo("Paint tile")
-			
 				
 			prev_mouse_cell_pos = tilemap.local_to_cell(tilemap.get_local_mouse_position())
 			return true
@@ -290,12 +323,7 @@ func delete_selection():
 	tilemap.erase_selection()
 	end_undoredo("Erase selection")
 	
-#Pasting using shortcuts doesn't need to wait for the user to click, we just paste at the cursor
-func paste_shortcut():
-	pass
-	
 func do_tile_action(tile_actions):
-	
 	if making_action:
 		return
 	print("do")
@@ -304,7 +332,6 @@ func do_tile_action(tile_actions):
 		tilemap.put_tile(action.cell,Vector2(int(action.newc.r*255),int(action.newc.g*255)),action.newc.a*255)
 	
 func undo_tile_action(tile_actions):
-	
 	if making_action:
 		return
 	print("undo")
@@ -315,7 +342,6 @@ func undo_tile_action(tile_actions):
 func begin_undoredo():
 	making_action = true
 	tile_action_list = {}
-	
 	
 func end_undoredo(action):
 	if tile_action_list.empty():
@@ -331,40 +357,246 @@ func add_do_tile_action(cell,prev_color,new_color):
 	var key = cell.y*tilemap.map.get_width() + cell.x
 	if tile_action_list.has(key):
 		var act = tile_action_list[key]
-		act.newc = new_color
+		if act.newc != new_color:
+			act.newc = new_color
 	else:
 		tile_action_list[key] = TileAction.new(cell,prev_color,new_color)
 	
+func file_option_selected(id):
+	match id:
+		SaveMap:
+			save_map()
+		ExportMap:
+			export_map()
+		SaveBrush:
+			save_brush()
+		LoadBrush:
+			load_brush()
+		LoadMap:
+			load_map()
+		ImportTiled:
+			import_tiled_map()
+	
 func popup_option_selected(id):
-	if id == 0:
-		clear_map_dialog.popup_centered()
-#	elif id == 1:
-#		resize_map()
+	if mouse_pressed:
+		release_mouse()
+	match id:
+		ResizeMap:
+			resize_map_dialog()
+		ClearMap:
+			clear_map_dialog.popup_centered()
+		NewMap:
+			new_map_dialog()
+		
+			
+func export_map():
+	if !is_instance_valid(tilemap.tileset) || !is_instance_valid(tilemap.map) || !(tilemap.tileset is ImageTexture):
+		var alert = WindowDialog.new()
+		alert.window_title = "Tileset must be an ImageTexture"
+		get_editor_interface().add_child(alert)
+		alert.popup_exclusive = true
+		alert.rect_min_size = Vector2(160,100)
+		alert.popup_centered()
+		yield(alert,"popup_hide")
+		alert.queue_free()
+		return
+		
+	var dialog = FileDialog.new()
+	dialog.add_filter("*.png")
+	dialog.access = FileDialog.ACCESS_RESOURCES
+	dialog.mode = FileDialog.MODE_SAVE_FILE
+	get_editor_interface().add_child(dialog)
+	dialog.popup_exclusive = true
+	dialog.popup_centered_ratio()
+	dialog.connect("file_selected",self,"save_dialog_confirmed",[dialog])
+	yield(dialog,"popup_hide")
+	if dialog.has_meta("confirmed"):
+		var region_start = Vector2(0,0)
+		var region_end = Vector2(tilemap.map.get_width()-1,tilemap.map.get_height()-1)
+		var img:ImageTexture = tilemap.get_map_region_as_texture(region_start,region_end)
+		if img == null:
+			print("couldn't make image fro map")
+		else:
+			var data = img.get_data()
+			if data != null && !data.is_empty():
+				var err = data.save_png(dialog.current_path)
+				if err != OK:
+					printerr(err)
+			else:
+				print("image is empty")
+		
+		
+	dialog.queue_free()
+	
+	
+
+			
+func save_map():
+	var dialog = FileDialog.new()
+	dialog.add_filter("*.png")
+	dialog.access = FileDialog.ACCESS_RESOURCES
+	dialog.mode = FileDialog.MODE_SAVE_FILE
+	get_editor_interface().add_child(dialog)
+	dialog.popup_exclusive = true
+	dialog.popup_centered_ratio()
+	dialog.connect("file_selected",self,"save_dialog_confirmed",[dialog])
+	yield(dialog,"popup_hide")
+	if dialog.has_meta("confirmed"):
+		var img = tilemap.map.get_data()
+		var err = img.save_png(dialog.current_path)
+		if err != OK:
+			printerr(err)
+	dialog.queue_free()
+
+func save_brush():
+	if brush == null:
+		return
+	var dialog = FileDialog.new()
+	dialog.add_filter("*.png")
+	dialog.access = FileDialog.ACCESS_RESOURCES
+	dialog.mode = FileDialog.MODE_SAVE_FILE
+	get_editor_interface().add_child(dialog)
+	dialog.popup_exclusive = true
+	dialog.popup_centered_ratio()
+	dialog.connect("file_selected",self,"save_dialog_confirmed",[dialog])
+	yield(dialog,"popup_hide")
+	if dialog.has_meta("confirmed"):
+		var img = brush
+		var err = img.save_png(dialog.current_path)
+		if err != OK:
+			printerr(err)
+	dialog.queue_free()
+
+func load_brush():
+	var dialog = FileDialog.new()
+	dialog.add_filter("*.png")
+	dialog.access = FileDialog.ACCESS_RESOURCES
+	dialog.mode = FileDialog.MODE_OPEN_FILE
+	get_editor_interface().add_child(dialog)
+	dialog.popup_exclusive = true
+	dialog.popup_centered_ratio()
+	dialog.connect("file_selected",self,"save_dialog_confirmed",[dialog])
+	yield(dialog,"popup_hide")
+	if dialog.has_meta("confirmed"):
+		var img = Image.new()
+		var err = img.load(dialog.current_path)
+		if err != OK:
+			printerr(err)
+		else:
+			brush = img
+	dialog.queue_free()
+	
+func load_map():
+	var dialog = FileDialog.new()
+	dialog.add_filter("*.png")
+	dialog.access = FileDialog.ACCESS_RESOURCES
+	dialog.mode = FileDialog.MODE_OPEN_FILE
+	get_editor_interface().add_child(dialog)
+	dialog.popup_exclusive = true
+	dialog.popup_centered_ratio()
+	dialog.connect("file_selected",self,"save_dialog_confirmed",[dialog])
+	yield(dialog,"popup_hide")
+	if dialog.has_meta("confirmed"):
+		var img = Image.new()
+		var err = img.load(dialog.current_path)
+		if err != OK:
+			printerr(err)
+		else:
+			var tex = ImageTexture.new()
+			tex.create_from_image(img,0)
+			tilemap.set_map_texture(tex)
+	dialog.queue_free()
+
+func import_tiled_map():
+	var diag = import_tiled_map_scene.instance()
+	
+	get_editor_interface().get_base_control().add_child(diag)
+	diag.popup_centered()
+	diag.plugin = self
+	yield(diag,"popup_hide")
+	diag.queue_free()
+	print("dialog closed")
+	
+func save_dialog_confirmed(path,dialog):
+	dialog.set_meta("confirmed",true)
+			
+func release_mouse():
+	mouse_pressed = false
+	if making_action:
+		if paint_mode == EditModePaint:
+			end_undoredo("Paint tiles")
+		elif paint_mode == EditModeErase:
+			end_undoredo("Erase tiles")
 	
 func clear_map():
 	tilemap.clear_map()
 	
-#func resize_map():
-#	if !is_instance_valid(tilemap) || !is_instance_valid(tilemap.map):
-#		return
-#	var spin_w:SpinBox = resize_dialog.get_node("V/H/Width")
-#	var spin_h:SpinBox = resize_dialog.get_node("V/H/Height")
-#	spin_w.max_value = MaxMapSize
-#	spin_h.max_value = MaxMapSize
-#	spin_w.min_value = 0
-#	spin_h.min_value = 0
-#	spin_h.value = tilemap.map.get_height()
-#	spin_w.value = tilemap.map.get_width()
-#	resize_dialog.popup_centered()
+func new_map_dialog():
+	if !is_instance_valid(tilemap):
+		return
+	var spin_w:SpinBox = new_map_dialog.get_node("V/H/Width")
+	var spin_h:SpinBox = new_map_dialog.get_node("V/H/Height")
+	spin_w.max_value = MaxMapSize
+	spin_h.max_value = MaxMapSize
+	spin_w.min_value = 0
+	spin_h.min_value = 0
+	spin_h.value = tilemap.map.get_height()
+	spin_w.value = tilemap.map.get_width()
+	new_map_dialog.popup_centered()
+	
+func new_map():
+	var spin_w:SpinBox = new_map_dialog.get_node("V/H/Width")
+	var spin_h:SpinBox = new_map_dialog.get_node("V/H/Height")
+	var w = spin_w.value
+	var h = spin_h.value
 
-#func resize_dialog_confirmed():
-#	if !is_instance_valid(tilemap) || !is_instance_valid(tilemap.map):
-#		return
-#	var spin_w:SpinBox = resize_dialog.get_node("V/H/Width")
-#	var spin_h:SpinBox = resize_dialog.get_node("V/H/Height")
-#	var w = spin_w.value
-#	var h = spin_h.value
-#	tilemap.set_map_size(w,h)
+	var img = Image.new()
+	img.create(w,h,false,Image.FORMAT_RGBA8)
+	var tex = ImageTexture.new()
+	tex.create_from_image(img,0)
+	tilemap.set_map_texture(null)
+	tilemap.call_deferred("set_map_texture",tex)
+	
+func resize_map_dialog():
+	if !is_instance_valid(tilemap):
+		return
+	var spin_w:SpinBox = resize_dialog.get_node("V/H/Width")
+	var spin_h:SpinBox = resize_dialog.get_node("V/H/Height")
+	spin_w.max_value = MaxMapSize
+	spin_h.max_value = MaxMapSize
+	spin_w.min_value = 0
+	spin_h.min_value = 0
+	spin_h.value = tilemap.map.get_height()
+	spin_w.value = tilemap.map.get_width()
+	resize_dialog.popup_centered()
+	
+func resize_map():
+	var spin_w:SpinBox = resize_dialog.get_node("V/H/Width")
+	var spin_h:SpinBox = resize_dialog.get_node("V/H/Height")
+	var w = spin_w.value
+	var h = spin_h.value
+	var prev_img = tilemap.map.get_data()
+	var img = Image.new()
+	img.create(w,h,false,Image.FORMAT_RGBA8)
+	img.lock()
+	prev_img.lock()
+	var x = 0
+	var y = 0
+	while(x<w):
+		y = 0
+		while(y<h):
+			if x < prev_img.get_width() && y < prev_img.get_height():
+				img.set_pixel(x,y,prev_img.get_pixel(x,y))
+			y+=1
+		x += 1
+		
+	prev_img.unlock()
+	img.unlock()
+	
+	var tex = ImageTexture.new()
+	tex.create_from_image(img,0)
+	tilemap.set_map_texture(null)
+	tilemap.call_deferred("set_map_texture",tex)
 		
 func paint_line(start,end,erase = false):
 	var x0 = start.x
@@ -419,7 +651,6 @@ func make_visible(v):
 		if v:
 			toolbar.show()
 			tile_picker.show()
-			tile_picker.set_process_input(true)
 		else:
 			if is_instance_valid(tilemap):
 				tilemap.draw_clear()
@@ -429,7 +660,6 @@ func make_visible(v):
 			set_process(false)
 			toolbar.hide()
 			tile_picker.hide()
-			tile_picker.set_process_input(false)
 
 func paint_mode_selected(id):
 	paint_mode = clamp(id,0,2)

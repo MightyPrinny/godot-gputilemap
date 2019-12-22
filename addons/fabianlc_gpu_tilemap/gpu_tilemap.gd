@@ -74,7 +74,7 @@ func set_tile_size(sz):
 func set_tileset_texture(tex):
 	tileset = tex
 	if tex != null && tex is ImageTexture:
-		tileset_data = tex.data
+		tileset_data = tex.get_data()
 	if !is_inside_tree():
 		return
 	
@@ -88,14 +88,14 @@ func set_map_texture(tex:ImageTexture):
 	map = tex
 	if map != null:
 		map_size = map.get_size()
-	if cached_image_data && tex != null:
-		image_data = tex.get_data()
+		image_data = map.get_data()
 	if !is_inside_tree():
 		return
 	update_shader()
-	var size = map.get_size()*tile_size
-	shader_mat.set_shader_param("viewportSize",size)
-	rect_size = size
+	if map != null:
+		var size = map.get_size()*tile_size
+		shader_mat.set_shader_param("viewportSize",size)
+		rect_size = size
 	
 func set_cached_image_data(b):
 	cached_image_data = b
@@ -176,12 +176,12 @@ func get_map_region_as_texture(start,end):
 	data.lock()
 	
 	var cs = Vector2(min(start.x,end.x),min(start.y,end.y))
-	var ce = Vector2(max(start.x,end.x),max(end.y,start.y))
+	var ce = Vector2(max(start.x,end.x),max(start.y,end.y))
 	cs.x = clamp(cs.x,0,map_size.x-1)
 	cs.y = clamp(cs.y,0,map_size.y-1)
 	ce.x = clamp(ce.x,0,map_size.x-1)
 	ce.y = clamp(ce.y,0,map_size.y-1)
-	var rect = Rect2(cell_start,Vector2(1,1)).expand(cell_end+Vector2(1,1))
+	var rect = Rect2(cs,Vector2(1,1)).expand(ce+Vector2(1,1))
 	var w = rect.size.x
 	var h = rect.size.y
 	var mw = data.get_width()
@@ -196,9 +196,9 @@ func get_map_region_as_texture(start,end):
 	
 	var tdata:Image
 	if cached_image_data:
-		data = tileset_data
+		tdata = tileset_data
 	else:
-		data = tileset.get_data()
+		tdata = tileset.get_data()
 	
 	tdata.lock()
 	
@@ -210,15 +210,16 @@ func get_map_region_as_texture(start,end):
 			p = cs + Vector2(x,y)
 			if p.x >= 0 && p.x < mw && p.y >= 0 && p.y < mh:
 				var col = data.get_pixelv(p)
-				img.blit_rect(tdata,Rect2(int(col.r*255)*tile_size,int(col.g*255)*tile_size,tile_size,tile_size),x*tile_size,y*tile_size)
+				if col.a != 0:
+					img.blit_rect(tdata,Rect2(int(col.r*255)*tile_size,int(col.g*255)*tile_size,tile_size,tile_size),Vector2(x*tile_size,y*tile_size))
 								
 			y += 1
 		x += 1	
 		
 	img.unlock()
-	data.ulock()
+	data.unlock()
 	tdata.unlock()
-	tex.set_data(img)
+	tex.create_from_image(img,0)
 	return tex
 	
 #Brush must be locked
