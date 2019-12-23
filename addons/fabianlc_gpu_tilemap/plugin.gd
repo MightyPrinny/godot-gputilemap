@@ -241,9 +241,9 @@ func forward_canvas_gui_input(event):
 		return false
 	
 	if event is InputEventMouse:
-		if !mouse_pressed && Input.is_mouse_button_pressed(BUTTON_LEFT):
-			mouse_pressed = true
-			prev_mouse_cell_pos = tilemap.local_to_cell(tilemap.get_local_mouse_position())
+#		if !mouse_pressed && Input.is_mouse_button_pressed(BUTTON_LEFT):
+#			mouse_pressed = true
+#			prev_mouse_cell_pos = tilemap.local_to_cell(tilemap.get_local_mouse_position())
 		var draw = false
 		var mouse_cell_pos = tilemap.local_to_cell(tilemap.get_local_mouse_position())
 		if event is InputEventMouseMotion:
