@@ -5,6 +5,8 @@ class_name GPUTileMap
 export var tileset:Texture setget set_tileset_texture
 export var map:ImageTexture setget set_map_texture
 export var tile_size:int = 16 setget set_tile_size
+export var instancing_script:Script = null
+export var autotile_script:Script = null
 var basic_culling = false
 var cached_image_data = true setget set_cached_image_data
 
@@ -73,7 +75,7 @@ func set_tile_size(sz):
 
 func set_tileset_texture(tex):
 	tileset = tex
-	if tex != null && tex is ImageTexture:
+	if tex != null:
 		tileset_data = tex.get_data()
 	if !is_inside_tree():
 		return
@@ -165,7 +167,7 @@ func get_tile_at_cell(cell):
 	return t	
 	
 func get_map_region_as_texture(start,end):
-	if map == null || tileset == null || !(tileset is ImageTexture):
+	if map == null || tileset == null:
 		return null
 		
 	var data:Image
@@ -386,30 +388,116 @@ func local_to_cell(global_pos):
 	
 	return pos
 
-func set_map_size(width,height):
-	#BROKEN
-	if !is_instance_valid(map):
-		return
-	width = max(width,0)
-	height = max(height,0)
+func generate_instances(parent):
+	var ownr = parent.get_parent()
+	var factory = instancing_script.new() as Reference
 	var data:Image
 	if cached_image_data:
 		data = image_data
 	else:
 		data = map.get_data()
-		
-	var new_data = Image.new()
+	data.lock()
 	
-#	data.lock()
-	new_data.create(width,height,false,data.get_format())
-#	new_data.lock()
-#	new_data.blit_rect(data,Rect2(0,0,clamp(width,0,data.get_width()),clamp(height,0,data.get_height())),Vector2(0,0))
-#	new_data.unlock()
-#	data.unlock()
+	var x = 0
+	var y = 0
+	var mw = data.get_width()
+	var mh = data.get_height()
+	var tile
+	var c
+	var node
+	var tid
+	var tst_w = int(tileset.get_data().get_width()/tile_size)
+	var visited = {}
+	var type = -1
+	var _type = -1
+	var yo = 0
+	var xo = 0
+	var gid = 0
+	while(y<mh):
+		x = 0
+		while(x<mw):	
+			gid = int(y*mw + x);
+			if !visited.has(gid):
+				c = data.get_pixel(x,y)
+				if c.a != 0:
+					tile = Vector2(int(c.r*255),int(c.g*255))
+					tid = int(tile.y*tst_w + tile.x);
+					type = factory.get_tile_type_id(tid)
+					if type != -1:
+						_type = type
+						yo = 0
+						xo = 0
+						visited[gid] = true
+						if factory.can_combine(_type):
+							while true:
+								xo += 1
+								if !((x+xo) < mw && (y + yo) < mh):
+									xo -= 1
+									break
+								c = data.get_pixel(x+xo,y)
+								gid = int(y*mw + (x+xo));
+								if visited.has(gid):
+									xo -= 1
+									break
+								if c.a == 0:
+									xo -= 1
+									break
+								
+								tile = Vector2(int(c.r*255),int(c.g*255))
+								tid = int(tile.y*tst_w + tile.x);
+								type = factory.get_tile_type_id(tid)
+								if type != _type:
+									xo -= 1
+									break
+								visited[gid] = true
+									
+							type = _type
+							
+							while true:
+								yo += 1
+								if !( (y + yo) < mh):
+									yo -= 1
+									break
+								var same = true
+								for i in range(xo+1):
+									gid = int((y+yo)*mw + (x+i));
+									if !visited.has(gid) && (x+i) < mw && (y + yo) < mh:
+										c = data.get_pixel(x+i,y+yo)
+										if c.a == 0:
+											same = false
+											break
+										tile = Vector2(int(c.r*255),int(c.g*255))
+										tid = int(tile.y*tst_w + tile.x);
+										type = factory.get_tile_type_id(tid)
+										if type != _type:
+											same = false
+											break
+										visited[gid] = true
+									else:
+										same = false
+										break
+								if !same:
+									for j in range(xo+1):
+										gid = int((y+yo)*mw + (x+j));
+										if visited.has(gid):
+											visited.erase(gid)
+									yo -= 1
+									break
 	
-	map.set_data(new_data)
-	image_data = new_data
-	set_map_texture(map)
+						node = factory.make_instance(_type,get_global_transform().xform(Vector2(x*tile_size,y*tile_size)))
+						#Merge
+						if node != null:
+							if xo > 0 || yo > 0:
+								node.scale.x += xo
+								node.scale.y += yo
+							parent.add_child(node)
+							node.owner = ownr
+			x += 1
+		y += 1
+	
+	data.unlock()
+	
+	
 
 func draw_stuff():
 	if draw_editor_selection:

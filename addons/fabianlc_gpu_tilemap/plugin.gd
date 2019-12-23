@@ -9,6 +9,7 @@ const EditModeSelect = 2
 const ResizeMap = 0
 const ClearMap = 1
 const NewMap = 2
+const InstanceGen = 3
 
 const SaveBrush = 0
 const LoadBrush = 1
@@ -83,9 +84,6 @@ func _init():
 	copy_shortcut.shortcut = copy_key
 	print("gputilemap plugin")
 	
-func get_plugin_icon():
-	return load("res://addons/fabianlc_gpu_tilemap/icons/icon_tile_map.svg")
-
 func _enter_tree():
 	undoredo = get_undo_redo()
 	toolbar = HBoxContainer.new()
@@ -114,6 +112,7 @@ func _enter_tree():
 	
 	var popup_menu = PopupMenu.new()
 	options_popup = popup_menu
+	popup_menu.add_item("generate instances", InstanceGen)
 	popup_menu.add_item("resize map", ResizeMap)
 	popup_menu.add_item("clear map",ClearMap)
 	popup_menu.add_item("new map",NewMap)
@@ -387,12 +386,29 @@ func popup_option_selected(id):
 			clear_map_dialog.popup_centered()
 		NewMap:
 			new_map_dialog()
-		
-			
-func export_map():
-	if !is_instance_valid(tilemap.tileset) || !is_instance_valid(tilemap.map) || !(tilemap.tileset is ImageTexture):
+		InstanceGen:
+			generate_instances()
+
+func generate_instances():
+	if tilemap.instancing_script == null:
 		var alert = WindowDialog.new()
-		alert.window_title = "Tileset must be an ImageTexture"
+		alert.window_title = "Please set the instancing script"
+		get_editor_interface().get_base_control().add_child(alert)
+		alert.popup_exclusive = true
+		alert.rect_min_size = Vector2(160,100)
+		alert.popup_centered()
+		yield(alert,"popup_hide")
+		alert.queue_free()
+		return
+	var new_node = Node2D.new()
+	get_editor_interface().get_edited_scene_root().add_child(new_node)
+	new_node.owner = get_editor_interface().get_edited_scene_root()
+	tilemap.generate_instances(new_node)
+
+func export_map():
+	if !is_instance_valid(tilemap.tileset) || !is_instance_valid(tilemap.map):
+		var alert = WindowDialog.new()
+		alert.window_title = "The map must have valid tileset and map texture"
 		get_editor_interface().add_child(alert)
 		alert.popup_exclusive = true
 		alert.rect_min_size = Vector2(160,100)
@@ -650,6 +666,7 @@ func make_visible(v):
 	if is_instance_valid(toolbar):
 		if v:
 			toolbar.show()
+			tile_picker.set_process(true)
 			tile_picker.show()
 		else:
 			if is_instance_valid(tilemap):
@@ -660,6 +677,7 @@ func make_visible(v):
 			set_process(false)
 			toolbar.hide()
 			tile_picker.hide()
+			tile_picker.set_process(false)
 
 func paint_mode_selected(id):
 	paint_mode = clamp(id,0,2)
