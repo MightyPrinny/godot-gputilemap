@@ -13,7 +13,7 @@ __meta__ = {
 }
 
 [node name="Label" type="Label" parent="."]
-margin_right = 256.0
+margin_right = 768.0
 margin_bottom = 14.0
 text = "Tileset"
 align = 1
@@ -21,13 +21,13 @@ valign = 1
 
 [node name="HSeparator" type="HSeparator" parent="."]
 margin_top = 18.0
-margin_right = 256.0
+margin_right = 768.0
 margin_bottom = 22.0
 
 [node name="ScrollContainer" type="ScrollContainer" parent="."]
 margin_top = 26.0
-margin_right = 256.0
-margin_bottom = 240.0
+margin_right = 768.0
+margin_bottom = 720.0
 mouse_filter = 1
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -36,8 +36,8 @@ __meta__ = {
 }
 
 [node name="Tileset" type="TextureRect" parent="ScrollContainer"]
-margin_right = 256.0
-margin_bottom = 214.0
+margin_right = 768.0
+margin_bottom = 694.0
 focus_mode = 2
 mouse_filter = 0
 size_flags_horizontal = 3

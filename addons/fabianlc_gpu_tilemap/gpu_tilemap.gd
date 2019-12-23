@@ -5,10 +5,11 @@ class_name GPUTileMap
 export var tileset:Texture setget set_tileset_texture
 export var map:ImageTexture setget set_map_texture
 export var tile_size:int = 16 setget set_tile_size
-export var instancing_script:Script = null
-export var autotile_script:Script = null
+export var instancing_script:Script = null#used for instancing objects on the map eg:collision objects
+export(Dictionary) var tile_data = {}#passed to the instancing script both the key and value are ints, the key is the tile id and the value is a type id
 var basic_culling = false
 var cached_image_data = true setget set_cached_image_data
+
 
 var image_data:Image
 var tileset_data:Image
@@ -422,13 +423,14 @@ func generate_instances(parent):
 				if c.a != 0:
 					tile = Vector2(int(c.r*255),int(c.g*255))
 					tid = int(tile.y*tst_w + tile.x);
-					type = factory.get_tile_type_id(tid)
+					type = tile_data.get(tid,-1)
+					
 					if type != -1:
 						_type = type
 						yo = 0
 						xo = 0
 						visited[gid] = true
-						if factory.can_combine(_type):
+						if factory.can_expand_h(_type):
 							while true:
 								xo += 1
 								if !((x+xo) < mw && (y + yo) < mh):
@@ -445,14 +447,14 @@ func generate_instances(parent):
 								
 								tile = Vector2(int(c.r*255),int(c.g*255))
 								tid = int(tile.y*tst_w + tile.x);
-								type = factory.get_tile_type_id(tid)
+								type = tile_data.get(tid,-1)
 								if type != _type:
 									xo -= 1
 									break
 								visited[gid] = true
 									
-							type = _type
-							
+						type = _type
+						if factory.can_expand_v(_type):
 							while true:
 								yo += 1
 								if !( (y + yo) < mh):
@@ -468,7 +470,7 @@ func generate_instances(parent):
 											break
 										tile = Vector2(int(c.r*255),int(c.g*255))
 										tid = int(tile.y*tst_w + tile.x);
-										type = factory.get_tile_type_id(tid)
+										type = tile_data.get(tid,-1)
 										if type != _type:
 											same = false
 											break
@@ -491,7 +493,13 @@ func generate_instances(parent):
 								node.scale.x += xo
 								node.scale.y += yo
 							parent.add_child(node)
+							
+							var childs = node.get_children()
 							node.owner = ownr
+							for c in childs:
+								if c.owner == null:
+									c.owner = ownr
+							
 			x += 1
 		y += 1
 	

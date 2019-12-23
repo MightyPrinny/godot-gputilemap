@@ -14,6 +14,9 @@ var hscroll = 0
 var vscroll = 0
 var scroll = false
 var scrolling = false
+var right_click_menu:PopupMenu
+var tile_id_dialog:AcceptDialog
+var tile_id_spinbox:SpinBox
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -25,7 +28,79 @@ func _ready():
 	scroll_v = scroll_container.get_v_scrollbar()
 	scroll_h.connect("changed",self,"scrollingh")
 	scroll_v.connect("changed",self,"scrollingv")
-	pass # Replace with function body.	
+	right_click_menu = PopupMenu.new()
+	right_click_menu.add_item("set type id",0)
+	right_click_menu.connect("id_pressed",self,"menu_id_pressed")
+	add_child(right_click_menu)
+	
+	tile_id_dialog = AcceptDialog.new()
+	tile_id_dialog.window_title = "Set tile type id"
+
+	tile_id_dialog.set_anchors_and_margins_preset(Control.PRESET_CENTER)
+	tile_id_dialog.size_flags_horizontal = SIZE_EXPAND_FILL
+	add_child(tile_id_dialog)
+	var container = VBoxContainer.new()
+	container.size_flags_horizontal = SIZE_EXPAND_FILL
+	container.set_anchors_and_margins_preset(Control.PRESET_CENTER)
+	tile_id_dialog.add_child(container)
+	var lbl = Label.new()
+	lbl.text = """The type id can be used by the instancing script.
+	set to -1 to clear
+	
+	"""
+	lbl.align = Label.ALIGN_CENTER
+	lbl.valign = Label.VALIGN_CENTER
+	lbl.set_anchors_and_margins_preset(Control.PRESET_CENTER)
+	container.add_child(lbl)
+	lbl = Label.new()
+	lbl.text = "Type id"
+	lbl.align = Label.ALIGN_CENTER
+	lbl.valign = Label.VALIGN_CENTER
+	lbl.set_anchors_and_margins_preset(Control.PRESET_CENTER)
+	container.add_child(lbl)
+	var spin_box = SpinBox.new()
+	tile_id_spinbox = spin_box
+	spin_box.min_value = -1
+	spin_box.max_value = 256*256
+	spin_box.set_anchors_and_margins_preset(Control.PRESET_CENTER)
+	container.add_child(spin_box)
+	spin_box.name = "TileId"
+	tile_id_dialog.connect("confirmed",self,"type_id_confirmed")
+	
+func menu_id_pressed(id):
+	if id == 0:
+		set_type_id()
+
+func set_type_id():
+	if tileset.texture == null || plugin == null:
+		return
+	tile_id_dialog.popup_centered()
+	
+func type_id_confirmed():
+	var type = tile_id_spinbox.value
+	
+	var selection  = Rect2(tileset.cell_start,Vector2(1,1)).expand(tileset.cell_end+Vector2(1,1))
+	var selection_size = selection.size
+	if(selection_size.x <= 0 || selection_size.y <= 0):
+		print("tileset selection is invalid")
+		return
+	else:
+		print(selection_size)
+	var tstw = int(tileset.texture.get_width()/tileset.cell_size)
+	var tile_data = plugin.tilemap.tile_data
+	var x = tileset.cell_start.x
+	var y = tileset.cell_start.y
+	var mx = x+selection_size.x
+	var my = y+selection_size.y
+	while x < mx:
+		y = tileset.cell_start.y
+		while y < my:
+			if type != -1:
+				tile_data[int(y*tstw+x)] = type
+			else:
+				tile_data.erase(int(y*tstw+x))
+			y = y + 1
+		x = x + 1
 		
 #Workaround for scroll bugs
 func scrollingh(b=false):
@@ -103,6 +178,9 @@ func tileset_input(event):
 				selecting = false
 				if is_instance_valid(plugin):
 					update_plugin_brush()
+			elif event.pressed && event.button_index == BUTTON_RIGHT:
+				right_click_menu.popup()
+				right_click_menu.set_global_position(get_global_mouse_position())
 		if event is InputEventMouseMotion:
 			if selecting:
 				tileset.set_selection(selection_start_cell,cell)
