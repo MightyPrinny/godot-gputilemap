@@ -486,7 +486,7 @@ func generate_instances(parent):
 									yo -= 1
 									break
 	
-						node = factory.make_instance(_type,get_global_transform().xform(Vector2(x*tile_size,y*tile_size)))
+						node = factory.make_instance(int(_type),get_global_transform().xform(Vector2(x*tile_size,y*tile_size)))
 						#Merge
 						if node != null:
 							if xo > 0 || yo > 0:
@@ -510,5 +510,5 @@ func generate_instances(parent):
 func draw_stuff():
 	if draw_editor_selection:
 		var rect = Rect2(cell_start*tile_size,Vector2(tile_size,tile_size)).expand(cell_end*tile_size+Vector2(tile_size,tile_size))
-		drawer.draw_rect(rect,Color(0,0.35,0.7,0.45),true,1.0,false)
+		drawer.draw_rect(rect,Color(0,0.35,0.7,0.45),true)
 		

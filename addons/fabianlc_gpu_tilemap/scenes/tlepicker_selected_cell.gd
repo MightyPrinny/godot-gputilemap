@@ -49,4 +49,4 @@ func _draw():
 		return
 	var scale = min(get_global_rect().size.y/float(texture.get_height()), get_global_rect().size.x/float(texture.get_width()))
 	var rect = Rect2(cell_start*cell_size*scale,Vector2(cell_size,cell_size)*scale).expand(cell_end*cell_size*scale+Vector2(cell_size,cell_size)*scale)
-	draw_rect(rect,Color.white,false,1.0,false) 
+	draw_rect(rect,Color.white,false) 
