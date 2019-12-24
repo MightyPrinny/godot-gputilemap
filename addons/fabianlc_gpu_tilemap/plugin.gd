@@ -593,26 +593,63 @@ func resize_map():
 	var h = spin_h.value
 	var prev_img = tilemap.map.get_data()
 	var img = Image.new()
+	var alignment = resize_dialog.get_node("V/GridContainer").get_alignment() as Vector2
+	var prev_rect = tilemap.get_rect()
 	img.create(w,h,false,Image.FORMAT_RGBA8)
 	img.lock()
 	prev_img.lock()
 	var x = 0
 	var y = 0
-	while(x<w):
-		y = 0
-		while(y<h):
-			if x < prev_img.get_width() && y < prev_img.get_height():
-				img.set_pixel(x,y,prev_img.get_pixel(x,y))
-			y+=1
-		x += 1
+	var prev_tex_size = tilemap.map.get_size()
+	var src_rect = Rect2(Vector2(0,0),prev_tex_size)
+	var dest_pos = Vector2(0,0)
+	var new_size = Vector2(w,h)*tilemap.tile_size
+	
+	match int(alignment.x):
+		0:
+			pass
+		1:
+			dest_pos.x -= (prev_tex_size.x-w)*0.5
+		2:
+			dest_pos.x -= prev_tex_size.x- w
+		
+	match int(alignment.y):
+		0:
+			pass
+		1:
+			dest_pos.y -= (prev_tex_size.y - h)*0.5
+		2:
+			dest_pos.y -= prev_tex_size.y-h
+	
+	img.blit_rect(prev_img,src_rect,dest_pos)
 		
 	prev_img.unlock()
 	img.unlock()
 	
 	var tex = ImageTexture.new()
 	tex.create_from_image(img,0)
-	tilemap.set_map_texture(null)
-	tilemap.call_deferred("set_map_texture",tex)
+	#tilemap.set_map_texture(null)
+	#tilemap.call_deferred("set_map_texture",tex)
+	tilemap.set_map_texture(tex)
+	print(alignment)
+	match int(alignment.x):
+		0:
+			pass
+		1:
+			tilemap.rect_position.x += (tilemap.rect_position.x+prev_rect.size.x*0.5)-(tilemap.rect_position.x+tilemap.rect_size.x*0.5)
+		2:
+			tilemap.rect_position.x += (tilemap.rect_position.x+prev_rect.size.x)-(tilemap.rect_position.x+tilemap.rect_size.x)
+		
+	match int(alignment.y):
+		0:
+			pass
+		1:
+			tilemap.rect_position.y += (prev_rect.size.y - tilemap.rect_size.y)*0.5
+		2:
+			tilemap.rect_position.y += (tilemap.rect_position.y+prev_rect.size.y)-(tilemap.rect_position.y+tilemap.rect_size.y)
+	
+	
+	
 		
 func paint_line(start,end,erase = false):
 	var x0 = start.x
