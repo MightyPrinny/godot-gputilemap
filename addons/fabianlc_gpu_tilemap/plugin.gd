@@ -68,6 +68,9 @@ var making_action = false
 
 var delete_shortcut:ShortCut
 var copy_shortcut:ShortCut
+var paint_shortcut:ShortCut
+var erase_shortcut:ShortCut
+var select_shortcut:ShortCut
 
 var ignore_next_click = false
 
@@ -82,6 +85,19 @@ func _init():
 	copy_key.scancode = KEY_C
 	copy_key.control = true
 	copy_shortcut.shortcut = copy_key
+	var paint_key = InputEventKey.new()
+	paint_key.scancode = KEY_A
+	paint_shortcut = ShortCut.new()
+	paint_shortcut.shortcut = paint_key
+	var erase_key = InputEventKey.new()
+	erase_key.scancode = KEY_S
+	erase_shortcut = ShortCut.new()
+	erase_shortcut.shortcut = erase_key
+	var select_key = InputEventKey.new()
+	select_key.scancode = KEY_D
+	select_shortcut = ShortCut.new()
+	select_shortcut.shortcut = select_key
+	
 	print("gputilemap plugin")
 	
 func _enter_tree():
@@ -105,9 +121,13 @@ func _enter_tree():
 	var lbl
 	paint_mode_option = OptionButton.new()
 	paint_mode_option.add_item("paint",EditModePaint)
+	paint_mode_option.get_popup().add_shortcut(paint_shortcut,EditModePaint)
 	paint_mode_option.add_item("erase",EditModeErase)
+	paint_mode_option.get_popup().add_shortcut(erase_shortcut,EditModeErase)
 	paint_mode_option.add_item("select",EditModeSelect)
+	paint_mode_option.get_popup().add_shortcut(select_shortcut,EditModeSelect)
 	paint_mode_option.connect("item_selected",self,"paint_mode_selected")
+	
 	toolbar.add_child(paint_mode_option)
 	
 	var popup_menu = PopupMenu.new()
@@ -305,11 +325,24 @@ func forward_canvas_gui_input(event):
 	if event is InputEventKey:
 		if !mouse_over || !event.pressed:
 			return
+		
 		if delete_shortcut.is_shortcut(event):
 			delete_selection()
 			return true
 		elif copy_shortcut.is_shortcut(event):
 			brush_from_selection()
+			return true
+		elif select_shortcut.is_shortcut(event):
+			paint_mode_option.select(paint_mode_option.get_item_index(EditModeSelect))
+			paint_mode_selected(EditModeSelect)
+			return true
+		elif paint_shortcut.is_shortcut(event):
+			paint_mode_option.select(paint_mode_option.get_item_index(EditModePaint))
+			paint_mode_selected(EditModePaint)
+			return true
+		elif erase_shortcut.is_shortcut(event):
+			paint_mode_option.select(paint_mode_option.get_item_index(EditModeErase))
+			paint_mode_selected(EditModeErase)
 			return true
 func delete_selection():
 	if !is_instance_valid(tilemap) || !is_instance_valid(tilemap.map):
@@ -723,4 +756,5 @@ func make_visible(v):
 			tile_picker.set_process(false)
 
 func paint_mode_selected(id):
+	release_mouse()
 	paint_mode = clamp(id,0,2)
