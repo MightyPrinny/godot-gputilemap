@@ -1,7 +1,7 @@
 tool
 extends TextureRect
 
-var cell_size:int = 16
+var cell_size:Vector2 = Vector2(16,16)
 var cell_start = Vector2()
 var cell_end = Vector2(1,1)
 
@@ -26,10 +26,10 @@ func set_selection(start,end):
 func update_tieset_size():
 	if texture == null:
 		return
-	tileset_size = (texture.get_size()/Vector2(cell_size,cell_size)).floor()
+	tileset_size = (texture.get_size()/cell_size).floor()
 	set_selection(cell_start,cell_end)
 	
-func set_cell_size(size:int):
+func set_cell_size(size:Vector2):
 	cell_size = size
 	update_tieset_size()
 	update()
@@ -40,13 +40,13 @@ func get_cell_poss_at(pos):
 	var scale = min(get_global_rect().size.y/float(texture.get_height()), get_global_rect().size.x/float(texture.get_width()))
 	var local = pos
 	var cs = cell_size * scale
-	local.x = floor(local.x/cs)
-	local.y = floor(local.y/cs)
+	local.x = floor(local.x/cs.x)
+	local.y = floor(local.y/cs.y)
 	return local
 	
 func _draw():
 	if texture == null:
 		return
 	var scale = min(get_global_rect().size.y/float(texture.get_height()), get_global_rect().size.x/float(texture.get_width()))
-	var rect = Rect2(cell_start*cell_size*scale,Vector2(cell_size,cell_size)*scale).expand(cell_end*cell_size*scale+Vector2(cell_size,cell_size)*scale)
+	var rect = Rect2(cell_start*cell_size*scale,cell_size*scale).expand(cell_end*cell_size*scale+cell_size*scale)
 	draw_rect(rect,Color.white,false) 

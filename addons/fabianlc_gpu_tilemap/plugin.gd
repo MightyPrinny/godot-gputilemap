@@ -45,7 +45,6 @@ var options_popup:PopupMenu
 var selection_popup:PopupMenu
 var file_popup:PopupMenu
 var brush:Image
-var tile_size = Vector2()
 
 const NoSelection = 0
 const Selecting = 1
@@ -212,13 +211,12 @@ func edit(object):
 		tilemap = object
 		tilemap.plugin = self
 		tilemap.tile_selector = tile_picker
-		tile_size = Vector2(tilemap.tile_size,tilemap.tile_size)
 		set_process(true)
 		print("tilemap selected")
 		
 	
 func handles(object):
-	return object is GPUTileMap && object.map != null && object.tileset != null && object.tile_size > 0
+	return object is GPUTileMap && object.map != null && object.tileset != null && object.tile_size != Vector2(0,0)
 	
 func _process(delta):
 	if is_instance_valid(tilemap):
@@ -575,7 +573,7 @@ func new_map():
 	
 func new_map_cr():
 	var img = Image.new()
-	img.create(int(tilemap.rect_size.x/tilemap.tile_size),int(tilemap.rect_size.y/tilemap.tile_size),false,Image.FORMAT_RGBA8)
+	img.create(int(tilemap.rect_size.x/tilemap.tile_size.x),int(tilemap.rect_size.y/tilemap.tile_size.y),false,Image.FORMAT_RGBA8)
 	var tex = ImageTexture.new()
 	tex.create_from_image(img,0)
 	tilemap.set_map_texture(tex)

@@ -4,7 +4,7 @@ class_name GPUTileMap
 
 export var tileset:Texture setget set_tileset_texture
 export var map:ImageTexture setget set_map_texture
-export var tile_size:int = 16 setget set_tile_size
+export var tile_size:Vector2 = Vector2(16,16) setget set_tile_size
 export var instancing_script:Script = null#used for instancing objects on the map eg:collision objects
 export(Dictionary) var tile_data = {}#passed to the instancing script both the key and value are ints, the key is the tile id and the value is a type id
 var basic_culling = false
@@ -54,7 +54,7 @@ func _enter_tree():
 
 func update_shader():
 	shader_mat.set_shader_param("tileSize",tile_size);
-	shader_mat.set_shader_param("inverseTileSize",1.0/tile_size)
+	shader_mat.set_shader_param("inverseTileSize",Vector2(1.0,1.0)/tile_size)
 	shader_mat.set_shader_param("tilemap",map)
 	#shader_mat.set_shader_param("viewportSize",get_viewport_rect().size)
 	shader_mat.set_shader_param("tileset",tileset)
@@ -64,7 +64,7 @@ func update_shader():
 		shader_mat.set_shader_param("inverseSpriteTextureSize",Vector2(1.0,1.0)/map.get_size())
 	
 func set_tile_size(sz):
-	tile_size = max(1,sz)
+	tile_size = Vector2(max(1,sz.x),max(1,sz.y))
 	if !is_inside_tree():
 		return
 	if plugin != null:
@@ -194,7 +194,7 @@ func get_map_region_as_texture(start,end):
 	
 	var tex = ImageTexture.new()
 	var img = Image.new()
-	img.create(w*tile_size,h*tile_size,false,Image.FORMAT_RGBA8)
+	img.create(w*tile_size.x,h*tile_size.y,false,Image.FORMAT_RGBA8)
 	img.lock()
 	
 	var tdata:Image
@@ -214,7 +214,7 @@ func get_map_region_as_texture(start,end):
 			if p.x >= 0 && p.x < mw && p.y >= 0 && p.y < mh:
 				var col = data.get_pixelv(p)
 				if col.a != 0:
-					img.blit_rect(tdata,Rect2(int(col.r*255)*tile_size,int(col.g*255)*tile_size,tile_size,tile_size),Vector2(x*tile_size,y*tile_size))
+					img.blit_rect(tdata,Rect2(int(col.r*255)*tile_size.x,int(col.g*255)*tile_size.y,tile_size.x,tile_size.y),Vector2(x*tile_size.x,y*tile_size.y))
 								
 			y += 1
 		x += 1	
@@ -383,8 +383,7 @@ func delete_tile_at_mouse():
 func local_to_cell(global_pos):
 	if map == null:
 		return
-	var ts = Vector2(tile_size,tile_size)
-	var pos = (global_pos/ts).floor()
+	var pos = (global_pos/tile_size).floor()
 	pos = Vector2(clamp(pos.x,0,map.get_width()-1),clamp(pos.y,0,map.get_height()-1))
 	
 	return pos
@@ -407,7 +406,7 @@ func generate_instances(parent):
 	var c
 	var node
 	var tid
-	var tst_w = int(tileset.get_data().get_width()/tile_size)
+	var tst_w = int(tileset.get_data().get_width()/tile_size.x)
 	var visited = {}
 	var type = -1
 	var _type = -1
@@ -486,7 +485,7 @@ func generate_instances(parent):
 									yo -= 1
 									break
 	
-						node = factory.make_instance(int(_type),get_global_transform().xform(Vector2(x*tile_size,y*tile_size)))
+						node = factory.make_instance(int(_type),get_global_transform().xform(Vector2(x*tile_size.x,y*tile_size.y)))
 						#Merge
 						if node != null:
 							if xo > 0 || yo > 0:
@@ -509,6 +508,6 @@ func generate_instances(parent):
 
 func draw_stuff():
 	if draw_editor_selection:
-		var rect = Rect2(cell_start*tile_size,Vector2(tile_size,tile_size)).expand(cell_end*tile_size+Vector2(tile_size,tile_size))
+		var rect = Rect2(cell_start*tile_size,tile_size).expand(cell_end*tile_size+tile_size)
 		drawer.draw_rect(rect,Color(0,0.35,0.7,0.45),true)
 		

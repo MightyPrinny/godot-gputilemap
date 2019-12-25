@@ -86,7 +86,7 @@ func type_id_confirmed():
 		return
 	else:
 		print(selection_size)
-	var tstw = int(tileset.texture.get_width()/tileset.cell_size)
+	var tstw = int(tileset.texture.get_width()/tileset.cell_size.x)
 	var tile_data = plugin.tilemap.tile_data
 	var x = tileset.cell_start.x
 	var y = tileset.cell_start.y
