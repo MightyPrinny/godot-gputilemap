@@ -9,7 +9,8 @@ const EditModeSelect = 2
 const ResizeMap = 0
 const ClearMap = 1
 const NewMap = 2
-const InstanceGen = 3
+const NewMapCR = 3
+const InstanceGen = 4
 
 const SaveBrush = 0
 const LoadBrush = 1
@@ -116,6 +117,7 @@ func _enter_tree():
 	popup_menu.add_item("resize map", ResizeMap)
 	popup_menu.add_item("clear map",ClearMap)
 	popup_menu.add_item("new map",NewMap)
+	popup_menu.add_item("new map from current rect",NewMapCR)
 	popup_menu.connect("id_pressed",self,"popup_option_selected")
 	
 	var tool_button = ToolButton.new()
@@ -241,9 +243,6 @@ func forward_canvas_gui_input(event):
 		return false
 	
 	if event is InputEventMouse:
-#		if !mouse_pressed && Input.is_mouse_button_pressed(BUTTON_LEFT):
-#			mouse_pressed = true
-#			prev_mouse_cell_pos = tilemap.local_to_cell(tilemap.get_local_mouse_position())
 		var draw = false
 		var mouse_cell_pos = tilemap.local_to_cell(tilemap.get_local_mouse_position())
 		if event is InputEventMouseMotion:
@@ -386,6 +385,8 @@ func popup_option_selected(id):
 			clear_map_dialog.popup_centered()
 		NewMap:
 			new_map_dialog()
+		NewMapCR:
+			new_map_cr()
 		InstanceGen:
 			generate_instances()
 
@@ -570,8 +571,14 @@ func new_map():
 	img.create(w,h,false,Image.FORMAT_RGBA8)
 	var tex = ImageTexture.new()
 	tex.create_from_image(img,0)
-	tilemap.set_map_texture(null)
-	tilemap.call_deferred("set_map_texture",tex)
+	tilemap.set_map_texture(tex)
+	
+func new_map_cr():
+	var img = Image.new()
+	img.create(int(tilemap.rect_size.x/tilemap.tile_size),int(tilemap.rect_size.y/tilemap.tile_size),false,Image.FORMAT_RGBA8)
+	var tex = ImageTexture.new()
+	tex.create_from_image(img,0)
+	tilemap.set_map_texture(tex)
 	
 func resize_map_dialog():
 	if !is_instance_valid(tilemap):
