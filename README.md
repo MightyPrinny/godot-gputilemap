@@ -17,7 +17,7 @@ Performance
 
 The main benefit you get with this addon is that because the zoom level doesn't affect performance(without changing the resolution of course) it doesn't lag the editor as much as the built in tilemap node and you can show a lot of tiles on screen in-game without getting a performance hit and removes the CPU overhead.
 
-Here's a comparison between two low end laptops, an Intel pentium 3540 and a BayTrail GPU vs an Intel i5 m540 and an Ironlake GPU (better gpu vs better cpu),the game is using the 2D stretch mode and is running at 768x720 without vsync and there are not empty tiles on the screen.
+Here's a comparison between two low end laptops, an Intel pentium 3540 and a BayTrail GPU vs an Intel i5 m540 and an Ironlake GPU (better gpu vs better cpu),the game is using the 2D stretch mode and is running at 768x720 without vsync and there are no empty tiles on the screen.
 
 Intel pentium 3540 with BayTrail GPU.
 
