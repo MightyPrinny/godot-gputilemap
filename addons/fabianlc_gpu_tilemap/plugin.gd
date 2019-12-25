@@ -205,6 +205,7 @@ func edit(object):
 	if object != null:
 		if tile_picker.tileset != null:
 			tile_picker.tileset.set_tex(object.tileset)
+			tile_picker.tileset.cell_size = object.tile_size
 			tile_picker.tileset.set_selection(Vector2(0,0),Vector2(0,0))
 			tile_picker.update_plugin_brush()
 		
