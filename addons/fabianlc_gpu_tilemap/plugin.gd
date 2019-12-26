@@ -246,7 +246,7 @@ func _process(delta):
 			
 		else:
 			mouse_over = false
-			print("ass")
+
 			if selection_state == Selecting:
 				selection_state = Selected
 			if paint_mode != EditModeSelect || selection_state != Selected:

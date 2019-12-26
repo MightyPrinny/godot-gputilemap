@@ -72,7 +72,7 @@ func menu_id_pressed(id):
 		set_type_id()
 
 func set_type_id():
-	if tileset.texture == null || plugin == null:
+	if tileset.spr.texture == null || plugin == null:
 		return
 	tile_id_dialog.popup_centered()
 	
@@ -86,7 +86,7 @@ func type_id_confirmed():
 		return
 	else:
 		print(selection_size)
-	var tstw = int(tileset.texture.get_width()/tileset.cell_size.x)
+	var tstw = int(tileset.spr.texture.get_width()/tileset.cell_size.x)
 	var tile_data = plugin.tilemap.tile_data
 	var x = tileset.cell_start.x
 	var y = tileset.cell_start.y
@@ -122,8 +122,8 @@ func _process(delta):
 	scroll_container.scroll_horizontal = hscroll
 
 func _resized():
-	if tileset != null && tileset.texture != null:
-		var tex = tileset.texture
+	if tileset != null && tileset.spr.texture != null:
+		var tex = tileset.spr.texture
 		if rect_size.x > tex.get_width()*2:
 			rect_size.x = tex.get_width()*2
 	pass	
