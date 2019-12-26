@@ -121,11 +121,11 @@ func _enter_tree():
 	var lbl
 	paint_mode_option = OptionButton.new()
 	paint_mode_option.add_item("paint",EditModePaint)
-	paint_mode_option.get_popup().add_shortcut(paint_shortcut,EditModePaint)
+	paint_mode_option.get_popup().set_item_shortcut(paint_mode_option.get_item_index(EditModePaint),paint_shortcut)
 	paint_mode_option.add_item("erase",EditModeErase)
-	paint_mode_option.get_popup().add_shortcut(erase_shortcut,EditModeErase)
+	paint_mode_option.get_popup().set_item_shortcut(paint_mode_option.get_item_index(EditModeErase),erase_shortcut)
 	paint_mode_option.add_item("select",EditModeSelect)
-	paint_mode_option.get_popup().add_shortcut(select_shortcut,EditModeSelect)
+	paint_mode_option.get_popup().set_item_shortcut(paint_mode_option.get_item_index(EditModeSelect),select_shortcut)
 	paint_mode_option.connect("item_selected",self,"paint_mode_selected")
 	
 	toolbar.add_child(paint_mode_option)
