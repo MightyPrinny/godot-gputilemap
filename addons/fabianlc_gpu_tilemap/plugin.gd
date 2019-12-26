@@ -241,11 +241,12 @@ func handles(object):
 	
 func _process(delta):
 	if is_instance_valid(tilemap):
-		if tilemap.get_rect().has_point(tilemap.get_local_mouse_position()):
+		if tilemap.get_global_rect().has_point(tilemap.get_global_mouse_position()):
 			mouse_over = true
 			
 		else:
 			mouse_over = false
+			print("ass")
 			if selection_state == Selecting:
 				selection_state = Selected
 			if paint_mode != EditModeSelect || selection_state != Selected:
