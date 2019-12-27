@@ -6,12 +6,16 @@ export var tileset:Texture setget set_tileset_texture
 export var map:ImageTexture setget set_map_texture
 export var tile_size:Vector2 = Vector2(16,16) setget set_tile_size
 export var instancing_script:Script = null#used for instancing objects on the map eg:collision objects
+export var autotile_script:Script = load("res://addons/fabianlc_gpu_tilemap/autotile scripts/default_autotile.gd")
+var autotile_script_instance = null setget set_autotile_script
+var has_autotile_script = false
+var do_autotile = true
 export(Dictionary) var tile_data = {}#passed to the instancing script both the key and value are ints, the key is the tile id and the value is a type id
-var basic_culling = false
-var cached_image_data = true setget set_cached_image_data
+export(Dictionary) var autotile_data = {}#Used for autotiling, maps the group_id to a dictionay of auto_tile ids which maps an autotile_id to a tile_id, eg: {group_id:{auto_tile_id:tile_id}}
+export(Dictionary) var autotile_data_val2key = {}#same as above but with the keys and values swaped, eg: {tile_id:{autotile_ids}}
+export(Dictionary) var autotile_tile_groups = {}#maps a tile_id to a group
 
-
-var image_data:Image
+var map_data:Image
 var tileset_data:Image
 
 var shader_mat:ShaderMaterial
@@ -30,12 +34,11 @@ var plugin = null
 func _ready():
 	if !Engine.editor_hint:
 		set_process_input(false)
-		if basic_culling:
-			set_process(true)
 	else:
 		drawer = Node2D.new()
 		add_child(drawer)
 		drawer.connect("draw",self,"draw_stuff")
+		
 
 func _enter_tree():
 	material = ShaderMaterial.new();
@@ -49,6 +52,7 @@ func _enter_tree():
 		size = map.get_size()*tile_size
 		shader_mat.set_shader_param("viewportSize",size)
 		rect_size = size
+	set_autotile_script(autotile_script)
 
 	set_process(false)
 
@@ -73,6 +77,19 @@ func set_tile_size(sz):
 			ts.cell_size = sz
 			ts.update()
 	update_shader()	
+	
+func set_autotile_script(script):
+	autotile_script = script
+	var inst = script.new()
+	if !(inst is AutotileScript):
+		printerr("autotile script must inherit from AutotileScript")
+		autotile_script = null
+		autotile_script_instance = null
+		has_autotile_script = false
+		return
+	autotile_script_instance = inst
+	inst.tilemap = self
+	has_autotile_script = true
 
 func set_tileset_texture(tex):
 	tileset = tex
@@ -91,7 +108,7 @@ func set_map_texture(tex:ImageTexture):
 	map = tex
 	if map != null:
 		map_size = map.get_size()
-		image_data = map.get_data()
+		map_data = map.get_data()
 	if !is_inside_tree():
 		return
 	update_shader()
@@ -100,16 +117,9 @@ func set_map_texture(tex:ImageTexture):
 		shader_mat.set_shader_param("viewportSize",size)
 		rect_size = size
 	
-func set_cached_image_data(b):
-	cached_image_data = b
+func set_cached_map_data(b):
+	map_data = b
 	set_map_texture(map)
-
-func _process(delta):
-	if !Engine.editor_hint && basic_culling:
-		var canvas_tr = get_canvas_transform()
-		var size =  canvas_tr.affine_inverse().xform(get_viewport_rect().size)
-		shader_mat.set_shader_param("viewportSize",size)
-		shader_mat.set_shader_param("viewOffset",-canvas_tr.get_origin())
 		
 func set_selection(start,end):
 	if map == null:
@@ -136,47 +146,38 @@ func put_tile_at_mouse(tilepos,alpha = 255):
 		return
 	put_tile(local_to_cell(get_local_mouse_position()),tilepos,alpha)
 	
-func put_tile(cell,tilepos,alpha = 255):
-	var data:Image
-	if cached_image_data:
-		data = image_data
-	else:
-		data = map.get_data()
-	data.lock()
+func put_tile(cell,tilepos,alpha = 255,update_map = true, do_locks = true):
+	if cell.x >= 0 && cell.x < map_size.x && cell.y >= 0 && cell.y < map_size.y:
+		if do_locks:
+			map_data.lock()
+		if plugin != null && plugin.making_action:
+			plugin.add_do_tile_action(cell,map_data.get_pixelv(cell),Color8(tilepos.x,tilepos.y,0,alpha))
+		
+		map_data.set_pixelv(cell,Color8(tilepos.x,tilepos.y,0,alpha))
+		if do_locks:
+			map_data.unlock()
+		if update_map:
+			map.set_data(map_data)
 	
-	if plugin != null && plugin.making_action:
-		plugin.add_do_tile_action(cell,data.get_pixelv(cell),Color8(tilepos.x,tilepos.y,0,alpha))
-	
-	data.set_pixelv(cell,Color8(tilepos.x,tilepos.y,0,alpha))
-	data.unlock()
-	map.set_data(data)
+func autotile_put_tile(cell,tilepos):
+	put_tile(cell,tilepos,255,false,false)
 	
 func get_tile_at_cell(cell):
 	if map == null:
 		return Vector2(0,0)
-	var	data:Image
-	if cached_image_data:
-		data = image_data
-	else:
-		data = map.get_data()
-	data.lock()
+	map_data.lock()
 	var t = Vector2()
-	if cell.x >= 0 && cell.x < data.get_width() && cell.y >= 0 && cell.y < data.get_height():
-		var	c = data.get_pixelv(cell)
+	if cell.x >= 0 && cell.x < map_data.get_width() && cell.y >= 0 && cell.y < map_data.get_height():
+		var	c = map_data.get_pixelv(cell)
 		t = Vector2(int(c.r*255),int(c.g*255))
-	data.unlock()
+	map_data.unlock()
 	return t	
 	
 func get_map_region_as_texture(start,end):
 	if map == null || tileset == null:
 		return null
-		
-	var data:Image
-	if cached_image_data:
-		data = image_data
-	else:
-		data = map.get_data()
-	data.lock()
+	
+	map_data.lock()
 	
 	var cs = Vector2(min(start.x,end.x),min(start.y,end.y))
 	var ce = Vector2(max(start.x,end.x),max(start.y,end.y))
@@ -187,8 +188,8 @@ func get_map_region_as_texture(start,end):
 	var rect = Rect2(cs,Vector2(1,1)).expand(ce+Vector2(1,1))
 	var w = rect.size.x
 	var h = rect.size.y
-	var mw = data.get_width()
-	var mh = data.get_height()
+	var mw = map_data.get_width()
+	var mh = map_data.get_height()
 	var c
 	var p
 	
@@ -197,11 +198,7 @@ func get_map_region_as_texture(start,end):
 	img.create(w*tile_size.x,h*tile_size.y,false,Image.FORMAT_RGBA8)
 	img.lock()
 	
-	var tdata:Image
-	if cached_image_data:
-		tdata = tileset_data
-	else:
-		tdata = tileset.get_data()
+	var tdata:Image = tileset_data
 	
 	tdata.lock()
 	
@@ -212,7 +209,7 @@ func get_map_region_as_texture(start,end):
 		while(y<h):
 			p = cs + Vector2(x,y)
 			if p.x >= 0 && p.x < mw && p.y >= 0 && p.y < mh:
-				var col = data.get_pixelv(p)
+				var col = map_data.get_pixelv(p)
 				if col.a != 0:
 					img.blit_rect(tdata,Rect2(int(col.r*255)*tile_size.x,int(col.g*255)*tile_size.y,tile_size.x,tile_size.y),Vector2(x*tile_size.x,y*tile_size.y))
 								
@@ -220,31 +217,29 @@ func get_map_region_as_texture(start,end):
 		x += 1	
 		
 	img.unlock()
-	data.unlock()
+	map_data.unlock()
 	tdata.unlock()
 	tex.create_from_image(img,0)
 	return tex
 	
 #Brush must be locked
-func erase_with_brush(cell,brush:Image):
-	var data:Image
-	if cached_image_data:
-		data = image_data
-	else:
-		data = map.get_data()
-	data.lock()
+func erase_with_brush(cell,brush:Image,update_map = true,do_locks = true):
+	if do_locks:
+		map_data.lock()
 	
 	var x = 0
 	var y = 0
 	var w = brush.get_width()
 	var h = brush.get_height()
-	var mw = data.get_width()
-	var mh = data.get_height()
+	var mw = map_data.get_width()
+	var mh = map_data.get_height()
 	var c
 	var p
 	
 	var store = plugin != null && plugin.making_action
 	var ec = Color(0,0,0,0)
+	var tile
+	var col
 	while(x < w):
 		y = 0
 		while(y < h):
@@ -252,34 +247,39 @@ func erase_with_brush(cell,brush:Image):
 			if p.x >= 0 && p.x < mw && p.y >= 0 && p.y < mh:
 				c = brush.get_pixel(x,y)
 				if c.a != 0:
+					col = map_data.get_pixelv(p)
 					if store:
-						plugin.add_do_tile_action(p,data.get_pixelv(p),ec)
-					data.set_pixelv(p,ec)
+						plugin.add_do_tile_action(p,col,ec)
+					
+					tile = Vector2(int(col.r*255),int(col.g*255))
+					map_data.set_pixelv(p,ec)
+					
+					if do_autotile && has_autotile_script && col.a != 0:
+						var gid = autotile_tile_groups.get(tile_get_id(tile),null)
+						if gid != null:
+							autotile_script_instance.autotile(p,gid)
 			y += 1
 		x+= 1
-	data.unlock()
-	map.set_data(data)
+	if do_locks:
+		map_data.unlock()
+	if(update_map):
+		map.set_data(map_data)
 	
 func brush_from_selection():
 	var brush = Image.new()
 	
 	var cell_rect = Rect2(cell_start,Vector2(1,1)).expand(cell_end+Vector2(1,1))
 	var cell = cell_rect.position
-	var data:Image
-	if cached_image_data:
-		data = image_data
-	else:
-		data = map.get_data()
 
-	data.lock()
+	map_data.lock()
 	
 	
 	var x = 0
 	var y = 0
 	var w = cell_rect.size.x
 	var h = cell_rect.size.y
-	var mw = data.get_width()
-	var mh = data.get_height()
+	var mw = map_data.get_width()
+	var mh = map_data.get_height()
 	var c = Color(0,0,0,0)
 	var p
 	
@@ -291,29 +291,24 @@ func brush_from_selection():
 		while(y < h):
 			p = cell+Vector2(x,y)
 			if p.x >= 0 && p.x < mw && p.y >= 0 && p.y < mh:
-				brush.set_pixel(x,y,data.get_pixelv(p))
+				brush.set_pixel(x,y,map_data.get_pixelv(p))
 			y += 1
 		x+= 1
 	
 	brush.unlock()
-	data.unlock()
+	map_data.unlock()
 	return brush
 	
 func erase_selection():
 	var cell_rect = Rect2(cell_start,Vector2(1,1)).expand(cell_end+Vector2(1,1))
-	var data:Image
-	if cached_image_data:
-		data = image_data
-	else:
-		data = map.get_data()
-	data.lock()
+	map_data.lock()
 	
 	var x = 0
 	var y = 0
 	var w = cell_rect.size.x
 	var h = cell_rect.size.y
-	var mw = data.get_width()
-	var mh = data.get_height()
+	var mw = map_data.get_width()
+	var mh = map_data.get_height()
 	var c = Color(0,0,0,0)
 	var p
 	
@@ -325,32 +320,29 @@ func erase_selection():
 			p = cell_start+Vector2(x,y)
 			if p.x >= 0 && p.x < mw && p.y >= 0 && p.y < mh:
 				if store:
-					plugin.add_do_tile_action(p,data.get_pixelv(p),c)
-				data.set_pixelv(p,c)
+					plugin.add_do_tile_action(p,map_data.get_pixelv(p),c)
+				map_data.set_pixelv(p,c)
 			y += 1
 		x+= 1
 	
-	data.unlock()
-	map.set_data(data)
+	map_data.unlock()
+	map.set_data(map_data)
 	
-func blend_brush(cell,brush:Image):
-	var data:Image
-	if cached_image_data:
-		data = image_data
-	else:
-		data = map.get_data()
-	data.lock()
+func blend_brush(cell,brush:Image,update_map = true,do_locks = true):
+	if do_locks:
+		map_data.lock()
 	
 	var x = 0
 	var y = 0
 	var w = brush.get_width()
 	var h = brush.get_height()
-	var mw = data.get_width()
-	var mh = data.get_height()
+	var mw = map_data.get_width()
+	var mh = map_data.get_height()
 	var c
 	var p
 	var store = plugin != null && plugin.making_action
-	
+	var col
+	var tile
 	while(x < w):
 		y = 0
 		while(y < h):
@@ -358,21 +350,29 @@ func blend_brush(cell,brush:Image):
 			if p.x >= 0 && p.x < mw && p.y >= 0 && p.y < mh:
 				c = brush.get_pixel(x,y)
 				if c.a != 0:
+					col = map_data.get_pixelv(p)
 					if store:
-						plugin.add_do_tile_action(p,data.get_pixelv(p),c)
-					data.set_pixelv(p,c)
+						plugin.add_do_tile_action(p,map_data.get_pixelv(p),c)
+					
+					map_data.set_pixelv(p,c)
+					tile = Vector2(int(col.r*255),int(col.g*255))
+					if do_autotile && has_autotile_script && c.a != 0:
+						var gid = autotile_tile_groups.get(tile_get_id(tile),null)
+						if gid != null:
+							autotile_script_instance.autotile(p,gid)
 			y += 1
 		x += 1
-	
-	data.unlock()
-	map.set_data(data)
+	if do_locks:
+		map_data.unlock()
+	if update_map:
+		map.set_data(map_data)
 	
 func clear_map():
 	if !is_instance_valid(map):
 		return
 	var data = Image.new()
 	data.create(map.get_width(),map.get_height(),false,map.get_data().get_format())
-	image_data = data
+	map_data = data
 	map.set_data(data)
 	
 func delete_tile_at_mouse():
@@ -391,17 +391,13 @@ func local_to_cell(global_pos):
 func generate_instances(parent):
 	var ownr = parent.get_parent()
 	var factory = instancing_script.new() as Reference
-	var data:Image
-	if cached_image_data:
-		data = image_data
-	else:
-		data = map.get_data()
-	data.lock()
+
+	map_data.lock()
 	
 	var x = 0
 	var y = 0
-	var mw = data.get_width()
-	var mh = data.get_height()
+	var mw = map_data.get_width()
+	var mh = map_data.get_height()
 	var tile
 	var c
 	var node
@@ -418,7 +414,7 @@ func generate_instances(parent):
 		while(x<mw):	
 			gid = int(y*mw + x);
 			if !visited.has(gid):
-				c = data.get_pixel(x,y)
+				c = map_data.get_pixel(x,y)
 				if c.a != 0:
 					tile = Vector2(int(c.r*255),int(c.g*255))
 					tid = int(tile.y*tst_w + tile.x);
@@ -435,7 +431,7 @@ func generate_instances(parent):
 								if !((x+xo) < mw && (y + yo) < mh):
 									xo -= 1
 									break
-								c = data.get_pixel(x+xo,y)
+								c = map_data.get_pixel(x+xo,y)
 								gid = int(y*mw + (x+xo));
 								if visited.has(gid):
 									xo -= 1
@@ -463,7 +459,7 @@ func generate_instances(parent):
 								for i in range(xo+1):
 									gid = int((y+yo)*mw + (x+i));
 									if !visited.has(gid) && (x+i) < mw && (y + yo) < mh:
-										c = data.get_pixel(x+i,y+yo)
+										c = map_data.get_pixel(x+i,y+yo)
 										if c.a == 0:
 											same = false
 											break
@@ -502,12 +498,100 @@ func generate_instances(parent):
 			x += 1
 		y += 1
 	
-	data.unlock()
+	map_data.unlock()
 	
+func tile_get_id(tile:Vector2):
+	var tst_w = int(tileset_data.get_width()/tile_size.x)
+	return int(tile.y*tst_w + tile.x);
+	
+#Autotile methods
+func autotile_add_id(tile,autotile_id):
+	var tid = tile_get_id(tile)
+	var group_id = autotile_tile_groups.get(tid,null)
+	if group_id == null:
+		printerr("the tile doesn't belong to an autotile group add")
+		return
+	
+	var gdata:Dictionary = autotile_data.get(group_id,null)
+	if gdata == null:
+		gdata = {}
+		autotile_data[group_id] = gdata
+		
+	gdata[autotile_id] = tile
+	
+	var ids:Array = autotile_data_val2key.get(tid,null)
+	if ids == null:
+		ids = []
+		autotile_data_val2key[tid] = ids
+	if !ids.has(autotile_id):
+		ids.append(autotile_id)
+	
+func autotile_remove_id(tile,autotile_id):
+	var tid = tile_get_id(tile)
+	var group_id = autotile_tile_groups.get(tid,null)
+	if group_id == null:
+		printerr("the tile doesn't belong to an autotile group remove")
+	var gdata:Dictionary = autotile_data.get(group_id,null)
+	if gdata != null:
+		gdata.erase(autotile_id)
+	
+	
+	gdata = autotile_data_val2key.get(tid,null)
+	if gdata == null:
+		return
+	var ids:Array = gdata.get(group_id,null)
+	if ids == null:
+		return
+	var pos = ids.find(autotile_id)
+	if pos != -1:
+		ids.remove(ids.find(autotile_id))
+	
+func autotile_tile_set_group(tile,group_id):
+	var tid = tile_get_id(tile)
+	#Remove tile from everything
+	
+	var ids = autotile_data_val2key.get(tid)
+	if ids == null:
+		ids = []
+	var groups = autotile_tile_groups.keys()
+	for g in groups:
+		var gdata = autotile_data.get(g,null)
+		if gdata != null:
+			for id in ids:
+				gdata.erase(id)
+	autotile_data_val2key.erase(tid)
+	if group_id != -1:
+		autotile_tile_groups[tid] = group_id
+	else:
+		autotile_tile_groups.erase(tid)
+
+func autotile_get_tile(pos):
+	if pos.x >= 0 && pos.y >= 0 && pos.x < map_size.x && pos.y < map_size.y:
+		var tile = map_data.get_pixelv(pos)
+		if tile.a != 0:
+			return Vector2(int(tile.r*255),int(tile.g*255))
+		
+	return Vector2(-1,-1)
+	
+func autotile_get_tile_pixel(pos):
+	if pos.x >= 0 && pos.y >= 0 && pos.x < map_size.x && pos.y < map_size.y:
+		var tile = map_data.get_pixelv(pos)
+		return tile
+	return Color(0,0,0,0)
+	
+	
+func tile_get_autotile_data(tile:Vector2):
+	return autotile_data_val2key.get(tile_get_id(tile),null)
 	
 
+func autotile_id_get_tile(autotile_id:int,group_id:int):
+	var ids = autotile_data.get(group_id,null)
+	if ids != null:
+		return ids.get(autotile_id,Vector2(-1,-1))
+	return Vector2(-1,-1)
+
+#Editor cell drawing
 func draw_stuff():
 	if draw_editor_selection:
 		var rect = Rect2(cell_start*tile_size,tile_size).expand(cell_end*tile_size+tile_size)
 		drawer.draw_rect(rect,Color(0,0.35,0.7,0.45),true)
-		

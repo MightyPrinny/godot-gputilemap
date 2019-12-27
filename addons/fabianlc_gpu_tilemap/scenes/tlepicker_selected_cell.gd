@@ -23,7 +23,7 @@ func set_tex(_texture:Texture):
 	if spr != null:
 		spr.texture = texture
 		update_tieset_size()
-		get_parent()._resized()
+		get_parent().get_parent()._resized()
 		on_resize()
 	elif !ready:
 		call_deferred("set_tex",texture)

@@ -357,10 +357,15 @@ func delete_selection():
 func do_tile_action(tile_actions):
 	if making_action:
 		return
+	if tilemap.map == null:
+		return
 	print("do")
 	var vals = tile_actions.values()
+	tilemap.map_data.lock()
 	for action in vals:
-		tilemap.put_tile(action.cell,Vector2(int(action.newc.r*255),int(action.newc.g*255)),action.newc.a*255)
+		tilemap.put_tile(action.cell,Vector2(int(action.newc.r*255),int(action.newc.g*255)),action.newc.a*255,false,false)
+	tilemap.map_data.unlock()
+	tilemap.map.set_data(tilemap.map_data)
 	
 func undo_tile_action(tile_actions):
 	if making_action:
@@ -711,9 +716,10 @@ func paint_line(start,end,erase = false):
 	var err = dx - dy;
 	
 	brush.lock()
+	tilemap.map_data.lock()
 	if !erase:
 		while(true):
-			tilemap.blend_brush(Vector2(x0,y0),brush)
+			tilemap.blend_brush(Vector2(x0,y0),brush,false,false)
 			if ((x0 == x1) && (y0 == y1)):
 				break;
 			var e2 = 2*err;
@@ -725,7 +731,7 @@ func paint_line(start,end,erase = false):
 				y0  += sy
 	else:
 		while(true):
-			tilemap.erase_with_brush(Vector2(x0,y0),brush)
+			tilemap.erase_with_brush(Vector2(x0,y0),brush,false,false)
 			if ((x0 == x1) && (y0 == y1)):
 				break;
 			var e2 = 2*err;
@@ -737,6 +743,8 @@ func paint_line(start,end,erase = false):
 				y0  += sy
 		
 	brush.unlock()
+	tilemap.map_data.unlock()
+	tilemap.map.set_data(tilemap.map_data)
    
 
 func make_visible(v):

@@ -1,6 +1,13 @@
 tool
 extends VBoxContainer
 
+const SetTypeId = 0
+const SetupAutotile = 1
+const AssignAutotileId = 2
+const RemoveAutoTileId = 3
+const ClearAutoTileId = 4
+
+
 var selected_tile = Vector2()
 
 onready var tileset = $ScrollContainer/Tileset
@@ -17,6 +24,7 @@ var scrolling = false
 var right_click_menu:PopupMenu
 var tile_id_dialog:AcceptDialog
 var tile_id_spinbox:SpinBox
+var last_gid = 0
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -29,7 +37,11 @@ func _ready():
 	scroll_h.connect("changed",self,"scrollingh")
 	scroll_v.connect("changed",self,"scrollingv")
 	right_click_menu = PopupMenu.new()
-	right_click_menu.add_item("set type id",0)
+	right_click_menu.add_item("Set type id",SetTypeId)
+	right_click_menu.add_item("Setup autotile",SetupAutotile)
+	right_click_menu.add_item("Assign to autotile id",AssignAutotileId)
+	right_click_menu.add_item("Unassign autotile id",RemoveAutoTileId)
+	right_click_menu.add_item("Reset autotile ids",ClearAutoTileId)
 	right_click_menu.connect("id_pressed",self,"menu_id_pressed")
 	add_child(right_click_menu)
 	
@@ -68,8 +80,80 @@ func _ready():
 	tile_id_dialog.connect("confirmed",self,"type_id_confirmed")
 	
 func menu_id_pressed(id):
-	if id == 0:
-		set_type_id()
+	match(id):
+		SetTypeId:
+			set_type_id()
+		SetupAutotile:
+			if plugin != null:
+				var tilemap:GPUTileMap = plugin.tilemap
+				if tilemap.has_autotile_script && tilemap.autotile_script_instance != null:
+					setup_autotile_dialog()
+			pass
+func setup_autotile_dialog():
+	var dialog = AcceptDialog.new()
+	dialog.window_title = "Group id"
+	dialog.set_anchors_preset(Control.PRESET_CENTER)
+	var vbox = VBoxContainer.new()
+	dialog.size_flags_horizontal = SIZE_EXPAND_FILL
+	dialog.size_flags_vertical = SIZE_EXPAND_FILL
+	dialog.add_child(vbox)
+	vbox.set_anchors_and_margins_preset(Control.PRESET_CENTER)
+	var label = Label.new()
+	label.set_anchors_preset(Control.PRESET_CENTER)
+	label.align = Label.ALIGN_CENTER
+	label.valign = Label.VALIGN_CENTER
+	label.text = "Group id"
+	vbox.add_child(label)
+	var spin = SpinBox.new()
+	spin.max_value = 256
+	spin.min_value = -1
+	spin.value = last_gid
+	vbox.name = "V"
+	vbox.add_child(spin)
+	spin.name = "Spin"
+	
+	plugin.get_editor_interface().get_base_control().add_child(dialog)
+	dialog.popup_centered()
+	dialog.connect("popup_hide",self,"autotile_dialog_hide",[dialog])
+	dialog.connect("confirmed",self,"setup_autotile_confirmed",[dialog])
+	
+func autotile_dialog_hide(dialog):
+	dialog.queue_free()			
+
+func setup_autotile_confirmed(dialog:AcceptDialog):
+	var spin = dialog.get_node("V/Spin")
+	
+	var group_id = spin.value
+	var selection_tiles = []
+	var tilemap:GPUTileMap = plugin.tilemap
+	if group_id == -1:
+		printerr("group id is -1")
+		return
+	
+	var selection  = Rect2(tileset.cell_start,Vector2(1,1)).expand(tileset.cell_end+Vector2(1,1))
+	var selection_size = selection.size
+	if(selection_size.x <= 0 || selection_size.y <= 0):
+		print("tileset selection is invalid")
+		return
+	else:
+		print(selection_size)
+	var tstw = int(tileset.spr.texture.get_width()/tileset.cell_size.x)
+	var tile_data = plugin.tilemap.tile_data
+	var x = tileset.cell_start.x
+	var y = tileset.cell_start.y
+	var mx = x+selection_size.x
+	var my = y+selection_size.y
+	while x < mx && y < my:
+		selection_tiles.append(Vector2(x,y))
+		x = x + 1
+		if x >= mx:
+			x = tileset.cell_start.x
+			y += 1
+	if !selection_tiles.empty():
+		tilemap.autotile_script_instance.setup_autotile(selection_tiles,group_id)
+		last_gid = spin.value + 1
+	else:
+		printerr("Selection is empty")
 
 func set_type_id():
 	if tileset.spr.texture == null || plugin == null:
