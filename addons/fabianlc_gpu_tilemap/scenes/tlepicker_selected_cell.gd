@@ -1,7 +1,7 @@
 tool
 extends Control
 
-var cell_size:Vector2 = Vector2(16,16)
+var cell_size:Vector2 = Vector2(16,16) setget set_cell_size
 var cell_start = Vector2()
 var cell_end = Vector2(1,1)
 
@@ -37,7 +37,7 @@ func set_selection(start,end):
 	cell_end.x = clamp(cell_end.x,0,tileset_size.x-1)
 	cell_end.y = clamp(cell_end.y,0,tileset_size.y-1)
 	update()
-	
+
 func update_tieset_size():
 	if texture == null:
 		return
