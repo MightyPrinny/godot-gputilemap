@@ -44,6 +44,7 @@ var prev_mouse_cell_pos  = Vector2()
 var options_popup:PopupMenu
 var selection_popup:PopupMenu
 var file_popup:PopupMenu
+var autotile_checkbox:CheckBox
 var brush:Image
 
 const NoSelection = 0
@@ -72,7 +73,7 @@ var paint_shortcut:ShortCut
 var erase_shortcut:ShortCut
 var select_shortcut:ShortCut
 
-var ignore_next_click = false
+#var ignore_next_click = false
 
 # Called when the node enters the scene tree for the first time.
 func _init():
@@ -117,8 +118,12 @@ func _enter_tree():
 	get_editor_interface().get_base_control().add_child(resize_dialog)
 	resize_dialog.connect("confirmed",self,"resize_map")
 	
+	var lbl = Label.new()
 	
-	var lbl
+	lbl.text = "autotile"
+	toolbar.add_child(lbl)
+	autotile_checkbox = CheckBox.new()
+	autotile_checkbox.connect("pressed",self,"autotile_checkbox_pressed",[autotile_checkbox])
 	paint_mode_option = OptionButton.new()
 	paint_mode_option.add_item("paint",EditModePaint)
 	paint_mode_option.get_popup().set_item_shortcut(paint_mode_option.get_item_index(EditModePaint),paint_shortcut)
@@ -127,8 +132,10 @@ func _enter_tree():
 	paint_mode_option.add_item("select",EditModeSelect)
 	paint_mode_option.get_popup().set_item_shortcut(paint_mode_option.get_item_index(EditModeSelect),select_shortcut)
 	paint_mode_option.connect("item_selected",self,"paint_mode_selected")
+	toolbar.add_child(autotile_checkbox)
 	
 	toolbar.add_child(paint_mode_option)
+	
 	
 	var popup_menu = PopupMenu.new()
 	options_popup = popup_menu
@@ -181,6 +188,13 @@ func _enter_tree():
 	add_control_to_container(EditorPlugin.CONTAINER_CANVAS_EDITOR_SIDE_LEFT,tile_picker)
 	tile_picker.hide()
 	
+func can_access_map():
+	return tilemap != null && tilemap.map != null && tilemap.tileset != null	
+	
+func autotile_checkbox_pressed(cb:CheckBox):
+	if can_access_map():
+		tilemap.do_autotile = cb.pressed
+	
 func show_option_popup():
 	options_popup.popup()
 	options_popup.set_global_position( options_popup.get_parent().get_global_rect().position + Vector2(8,8))
@@ -201,7 +215,7 @@ func selection_item_selected(id):
 		delete_selection()
 
 func brush_from_selection():
-	if is_instance_valid(tilemap) && is_instance_valid(tilemap.map):
+	if can_access_map():
 		brush = tilemap.brush_from_selection()
 		print("Copy to brush")
 
@@ -232,6 +246,7 @@ func edit(object):
 		tilemap = object
 		tilemap.plugin = self
 		tilemap.tile_selector = tile_picker
+		autotile_checkbox.pressed = tilemap.do_autotile
 		set_process(true)
 		print("tilemap selected")
 		
@@ -240,7 +255,7 @@ func handles(object):
 	return object is GPUTileMap && object.map != null && object.tileset != null && object.tile_size != Vector2(0,0)
 	
 func _process(delta):
-	if is_instance_valid(tilemap):
+	if can_access_map():
 		if tilemap.get_global_rect().has_point(tilemap.get_global_mouse_position()):
 			mouse_over = true
 			
@@ -257,8 +272,8 @@ func _process(delta):
 	
 #Input handling
 func forward_canvas_gui_input(event):
-	if !is_instance_valid(tilemap):
-		return false
+	if !can_access_map():
+		return
 	if !mouse_over :
 		return false
 	
@@ -346,7 +361,7 @@ func forward_canvas_gui_input(event):
 			paint_mode_selected(EditModeErase)
 			return true
 func delete_selection():
-	if !is_instance_valid(tilemap) || !is_instance_valid(tilemap.map):
+	if !can_access_map():
 		return
 	if paint_mode != EditModeSelect || selection_state != Selected:
 		return
@@ -372,9 +387,12 @@ func undo_tile_action(tile_actions):
 		return
 	print("undo")
 	var vals = tile_actions.values()
+	tilemap.map_data.lock()
 	for action in vals:
-		tilemap.put_tile(action.cell,Vector2(int(action.prevc.r*255),int(action.prevc.g*255)),action.prevc.a*255)
-
+		tilemap.put_tile(action.cell,Vector2(int(action.prevc.r*255),int(action.prevc.g*255)),action.prevc.a*255,false,false)
+	tilemap.map_data.unlock()
+	tilemap.map.set_data(tilemap.map_data)
+	
 func begin_undoredo():
 	making_action = true
 	tile_action_list = {}
@@ -445,17 +463,9 @@ func generate_instances():
 	tilemap.generate_instances(new_node)
 
 func export_map():
-	if !is_instance_valid(tilemap.tileset) || !is_instance_valid(tilemap.map):
-		var alert = WindowDialog.new()
-		alert.window_title = "The map must have valid tileset and map texture"
-		get_editor_interface().add_child(alert)
-		alert.popup_exclusive = true
-		alert.rect_min_size = Vector2(160,100)
-		alert.popup_centered()
-		yield(alert,"popup_hide")
-		alert.queue_free()
+	if !can_access_map():
+		printerr("can't access tilemap'")
 		return
-		
 	var dialog = FileDialog.new()
 	dialog.add_filter("*.png")
 	dialog.access = FileDialog.ACCESS_RESOURCES

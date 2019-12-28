@@ -9,7 +9,7 @@ export var instancing_script:Script = null#used for instancing objects on the ma
 export var autotile_script:Script = load("res://addons/fabianlc_gpu_tilemap/autotile scripts/default_autotile.gd")
 var autotile_script_instance = null setget set_autotile_script
 var has_autotile_script = false
-var do_autotile = true
+var do_autotile = false
 export(Dictionary) var tile_data = {}#passed to the instancing script both the key and value are ints, the key is the tile id and the value is a type id
 export(Dictionary) var autotile_data = {}#Used for autotiling, maps the group_id to a dictionay of auto_tile ids which maps an autotile_id to a tile_id, eg: {group_id:{auto_tile_id:tile_id}}
 export(Dictionary) var autotile_data_val2key = {}#same as above but with the keys and values swaped, eg: {tile_id:{autotile_ids}}
@@ -311,7 +311,8 @@ func erase_selection():
 	var mh = map_data.get_height()
 	var c = Color(0,0,0,0)
 	var p
-	
+	var col
+	var tile
 	var store = plugin != null && plugin.making_action
 	
 	while(x < w):
@@ -319,9 +320,17 @@ func erase_selection():
 		while(y < h):
 			p = cell_start+Vector2(x,y)
 			if p.x >= 0 && p.x < mw && p.y >= 0 && p.y < mh:
+				col = map_data.get_pixelv(p)
 				if store:
-					plugin.add_do_tile_action(p,map_data.get_pixelv(p),c)
+					plugin.add_do_tile_action(p,col,c)
+					
+				tile = Vector2(int(col.r*255),int(col.g*255))
 				map_data.set_pixelv(p,c)
+				if do_autotile && has_autotile_script && col.a != 0:
+					var gid = autotile_tile_groups.get(tile_get_id(tile),null)
+					if gid != null:
+						autotile_script_instance.autotile(p,gid)
+				
 			y += 1
 		x+= 1
 	
@@ -343,6 +352,10 @@ func blend_brush(cell,brush:Image,update_map = true,do_locks = true):
 	var store = plugin != null && plugin.making_action
 	var col
 	var tile
+	var autotile_update_pending
+	var autotiling = do_autotile && has_autotile_script
+	if autotiling:
+		autotile_update_pending = {}
 	while(x < w):
 		y = 0
 		while(y < h):
@@ -355,13 +368,22 @@ func blend_brush(cell,brush:Image,update_map = true,do_locks = true):
 						plugin.add_do_tile_action(p,map_data.get_pixelv(p),c)
 					
 					map_data.set_pixelv(p,c)
-					tile = Vector2(int(col.r*255),int(col.g*255))
-					if do_autotile && has_autotile_script && c.a != 0:
+					tile = Vector2(int(c.r*255),int(c.g*255))
+					if autotiling && c.a != 0:
 						var gid = autotile_tile_groups.get(tile_get_id(tile),null)
 						if gid != null:
 							autotile_script_instance.autotile(p,gid)
+							var neighbors = autotile_script_instance.get_nearby_tiles(p,gid)
+							for _tile in neighbors:
+								autotile_update_pending[_tile[1]] = gid
 			y += 1
 		x += 1
+	if autotiling:
+		var keys = autotile_update_pending.keys()
+		for _tile in keys:
+			var gid = autotile_update_pending[_tile]
+			if gid != null:
+				autotile_script_instance.autotile(_tile,gid)
 	if do_locks:
 		map_data.unlock()
 	if update_map:
@@ -505,6 +527,11 @@ func tile_get_id(tile:Vector2):
 	return int(tile.y*tst_w + tile.x);
 	
 #Autotile methods
+func clear_autitle_data():
+	autotile_data = {}
+	autotile_data_val2key = {}
+	autotile_tile_groups = {}
+
 func autotile_add_id(tile,autotile_id):
 	var tid = tile_get_id(tile)
 	var group_id = autotile_tile_groups.get(tid,null)
