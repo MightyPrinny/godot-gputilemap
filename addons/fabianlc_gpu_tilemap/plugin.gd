@@ -19,6 +19,8 @@ const LoadMap = 3
 const ExportMap = 4
 const ImportTiled = 5
 
+const FlipBrushH = 0
+const FlipBrushV = 1
 
 const MaxMapSize = 1024 #1024x1024 textures should be safe to use on old devices
 
@@ -43,6 +45,7 @@ var mouse_pressed = false
 var prev_mouse_cell_pos  = Vector2()
 var options_popup:PopupMenu
 var selection_popup:PopupMenu
+var brush_popup:PopupMenu
 var file_popup:PopupMenu
 var autotile_checkbox:CheckBox
 var brush:Image
@@ -124,6 +127,8 @@ func _enter_tree():
 	toolbar.add_child(lbl)
 	autotile_checkbox = CheckBox.new()
 	autotile_checkbox.connect("pressed",self,"autotile_checkbox_pressed",[autotile_checkbox])
+	toolbar.add_child(autotile_checkbox)
+	
 	paint_mode_option = OptionButton.new()
 	paint_mode_option.add_item("paint",EditModePaint)
 	paint_mode_option.get_popup().set_item_shortcut(paint_mode_option.get_item_index(EditModePaint),paint_shortcut)
@@ -132,9 +137,8 @@ func _enter_tree():
 	paint_mode_option.add_item("select",EditModeSelect)
 	paint_mode_option.get_popup().set_item_shortcut(paint_mode_option.get_item_index(EditModeSelect),select_shortcut)
 	paint_mode_option.connect("item_selected",self,"paint_mode_selected")
-	toolbar.add_child(autotile_checkbox)
-	
 	toolbar.add_child(paint_mode_option)
+	
 	
 	
 	var popup_menu = PopupMenu.new()
@@ -153,6 +157,17 @@ func _enter_tree():
 	toolbar.add_child(tool_button)
 	
 	tool_button.add_child(popup_menu)
+	
+	brush_popup = PopupMenu.new()
+	brush_popup.add_item("Flip positions horizontally",FlipBrushH)
+	brush_popup.add_item("Flip positions vertically", FlipBrushV)
+	brush_popup.connect("id_pressed",self,"brush_item_selected")
+	
+	tool_button = ToolButton.new()
+	tool_button.text = "Brush"
+	tool_button.add_child(brush_popup)
+	tool_button.connect("pressed",self,"show_brush_popup")
+	toolbar.add_child(tool_button)
 	
 	popup_menu = PopupMenu.new()
 	tool_button = ToolButton.new()
@@ -195,6 +210,11 @@ func autotile_checkbox_pressed(cb:CheckBox):
 	if can_access_map():
 		tilemap.do_autotile = cb.pressed
 	
+func show_brush_popup():
+	brush_popup.popup()
+	brush_popup.set_global_position( brush_popup.get_parent().get_global_rect().position + Vector2(8,8))
+		
+
 func show_option_popup():
 	options_popup.popup()
 	options_popup.set_global_position( options_popup.get_parent().get_global_rect().position + Vector2(8,8))
@@ -213,6 +233,20 @@ func selection_item_selected(id):
 		brush_from_selection()
 	elif id == 1:#Delete
 		delete_selection()
+
+func brush_item_selected(id):
+	match id:
+		FlipBrushH:
+			flip_brush_h()
+		FlipBrushV:
+			flip_brush_v()
+			
+func flip_brush_h():
+	brush.flip_x()
+	
+	
+func flip_brush_v():
+	brush.flip_y()
 
 func brush_from_selection():
 	if can_access_map():

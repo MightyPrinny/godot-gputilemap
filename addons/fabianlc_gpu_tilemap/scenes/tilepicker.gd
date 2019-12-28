@@ -3,11 +3,12 @@ extends VBoxContainer
 
 const SetTypeId = 0
 const SetupAutotile = 1
-const SetAutotileId = 2
-const SetGroupId = 3
-const ClearAutotileData = 4
-const SaveTileData = 5
-const LoadTileData = 6
+const AddAutotileId = 2
+const RemoveAutotileId = 3
+const SetGroupId = 4
+const ClearAutotileData = 5
+const SaveTileData = 6
+const LoadTileData = 7
 
 var selected_tile = Vector2()
 
@@ -44,7 +45,8 @@ func _ready():
 	right_click_menu.add_item("Set type id",SetTypeId)
 	right_click_menu.add_item("Setup autotile",SetupAutotile)
 	right_click_menu.add_separator("Manual autotile setup")
-	right_click_menu.add_item("Set autotile id",SetAutotileId)
+	right_click_menu.add_item("Add autotile id",AddAutotileId)
+	right_click_menu.add_item("Remove autotile id",RemoveAutotileId)
 	right_click_menu.add_item("Set autotile group id",SetGroupId)
 	right_click_menu.add_separator("Tile data")
 	right_click_menu.add_item("Clear autotile data",ClearAutotileData)
@@ -101,8 +103,10 @@ func menu_id_pressed(id):
 				open_spin_dialog("Autotile group id","Value")
 			else:
 				printerr("Missing autotile script")
-		SetAutotileId:
-			open_spin_dialog("Autotile id","Value","Set to -1 to clear")
+		AddAutotileId:
+			open_spin_dialog("Add autotile id","Value","")
+		RemoveAutotileId:
+			open_spin_dialog("Remove autotile id","Value","")
 		SetGroupId:
 			open_spin_dialog("Autotile group id","Value","Set to -1 to clear")
 		SaveTileData:
@@ -240,8 +244,52 @@ func spin_dialog_confirmed(dialog:AcceptDialog):
 			setup_autotile_confirmed()
 		SetGroupId:
 			set_group_id_confirmed()
-		SetAutotileId:
-			set_autotile_id_confirmed()
+		AddAutotileId:
+			add_autotile_id_confirmed()
+		RemoveAutotileId:
+			remove_autotile_id_confirmed()
+func add_autotile_id_confirmed():
+	var tilemap = plugin.tilemap
+	var selection  = Rect2(tileset.cell_start,Vector2(1,1)).expand(tileset.cell_end+Vector2(1,1))
+	var selection_size = selection.size
+	if(selection_size.x <= 0 || selection_size.y <= 0):
+		printerr("tileset selection is invalid")
+		return
+	var tstw = int(tileset.spr.texture.get_width()/tileset.cell_size.x)
+	var tile_data = plugin.tilemap.tile_data
+	var x = tileset.cell_start.x
+	var y = tileset.cell_start.y
+	var mx = x+selection_size.x
+	var my = y+selection_size.y
+	
+	while x < mx && y < my:
+		tilemap.autotile_add_id(Vector2(x,y),spin_value)
+		x = x + 1
+		if x >= mx:
+			x = tileset.cell_start.x
+			y += 1
+
+	
+func remove_autotile_id_confirmed():
+	var tilemap = plugin.tilemap
+	var selection  = Rect2(tileset.cell_start,Vector2(1,1)).expand(tileset.cell_end+Vector2(1,1))
+	var selection_size = selection.size
+	if(selection_size.x <= 0 || selection_size.y <= 0):
+		printerr("tileset selection is invalid")
+		return
+	var tstw = int(tileset.spr.texture.get_width()/tileset.cell_size.x)
+	var tile_data = plugin.tilemap.tile_data
+	var x = tileset.cell_start.x
+	var y = tileset.cell_start.y
+	var mx = x+selection_size.x
+	var my = y+selection_size.y
+	
+	while x < mx && y < my:
+		tilemap.autotile_remove_id(Vector2(x,y),spin_value)
+		x = x + 1
+		if x >= mx:
+			x = tileset.cell_start.x
+			y += 1
 			
 func setup_autotile_confirmed():
 	if spin_value == -1:
@@ -295,22 +343,6 @@ func set_group_id_confirmed():
 			x = tileset.cell_start.x
 			y += 1
 	
-func set_autotile_id_confirmed():
-	var tilemap:GPUTileMap = plugin.tilemap
-	var selection  = Rect2(tileset.cell_start,Vector2(1,1)).expand(tileset.cell_end+Vector2(1,1))
-	var selection_size = selection.size
-	if(selection_size.x <= 0 || selection_size.y <= 0):
-		printerr("tileset selection is invalid")
-		return
-	else:
-		if(selection_size.x != 1 || selection_size.y != 1):
-			printerr("More than 1 tile selected, you can only set the autotile id for one tile")
-			return
-	if spin_value == -1:
-		tilemap.autotile_add_id(tileset.cell_start,spin_value)
-	else:
-		tilemap.autotile_remove_value(tileset.cell_start,spin_value)
-
 func set_type_id():
 	if tileset.spr.texture == null || plugin == null:
 		return
