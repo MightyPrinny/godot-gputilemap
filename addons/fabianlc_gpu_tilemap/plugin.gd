@@ -412,7 +412,7 @@ func do_tile_action(tile_actions):
 	var vals = tile_actions.values()
 	tilemap.map_data.lock()
 	for action in vals:
-		tilemap.put_tile(action.cell,Vector2(int(action.newc.r*255),int(action.newc.g*255)),action.newc.a*255,false,false)
+		tilemap.put_tile_pixel(action.cell,action.newc,false,false)
 	tilemap.map_data.unlock()
 	tilemap.map.set_data(tilemap.map_data)
 	
@@ -423,7 +423,7 @@ func undo_tile_action(tile_actions):
 	var vals = tile_actions.values()
 	tilemap.map_data.lock()
 	for action in vals:
-		tilemap.put_tile(action.cell,Vector2(int(action.prevc.r*255),int(action.prevc.g*255)),action.prevc.a*255,false,false)
+		tilemap.put_tile_pixel(action.cell,action.prevc,false,false)
 	tilemap.map_data.unlock()
 	tilemap.map.set_data(tilemap.map_data)
 	

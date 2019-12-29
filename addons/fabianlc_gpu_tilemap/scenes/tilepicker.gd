@@ -29,6 +29,10 @@ var tile_id_spinbox:SpinBox
 var last_option = 0
 var spin_value = 0
 
+#Options
+onready var flip_h:CheckBox = get_node("Options/FlipH")
+onready var flip_v:CheckBox = get_node("Options/FlipV")
+
 const magic = "H3po@xd23s94h7f42v5wp29"
 
 # Called when the node enters the scene tree for the first time.
@@ -89,6 +93,8 @@ func _ready():
 	spin_box.name = "TileId"
 	tile_id_dialog.connect("confirmed",self,"type_id_confirmed")
 	
+	flip_h.connect("toggled",self,"update_plugin_brush")
+	flip_v.connect("toggled",self,"update_plugin_brush")
 func menu_id_pressed(id):
 	last_option = id
 	if plugin == null || plugin.tilemap == null || plugin.tilemap.tileset == null || plugin.tilemap.map == null:
@@ -404,12 +410,11 @@ func _resized():
 func tileset_mouse_exited():
 	if selecting:
 		selecting = false
-		if is_instance_valid(plugin):
-			update_plugin_brush()
+		update_plugin_brush()
 		
 			
-func update_plugin_brush():
-	if !is_instance_valid(tileset):
+func update_plugin_brush(a=null):
+	if !is_instance_valid(plugin) || !is_instance_valid(tileset):
 		return
 	print("update plugin brush")
 	var selection  = Rect2(tileset.cell_start,Vector2(1,1)).expand(tileset.cell_end+Vector2(1,1))
@@ -424,13 +429,15 @@ func update_plugin_brush():
 	brush.create(selection_size.x,selection_size.y,false,Image.FORMAT_RGBA8)
 	brush.lock()
 	
+	var flip = int(flip_h.pressed) + int(flip_v.pressed)*2
+	print(flip)
 	var x = 0
 	var y = 0
 	var mx = selection_size.x
 	var my = selection_size.y
 	while x < mx:
 		while y < my:
-			brush.set_pixel(x,y,Color8(x+tileset.cell_start.x,y+tileset.cell_start.y,0,255))
+			brush.set_pixel(x,y,Color8(x+tileset.cell_start.x,y+tileset.cell_start.y,flip,255))
 			y = y + 1
 		y = 0
 		x = x + 1
@@ -448,8 +455,7 @@ func tileset_input(event):
 				selection_start_cell = cell
 			elif event.button_index == BUTTON_LEFT && !event.pressed:
 				selecting = false
-				if is_instance_valid(plugin):
-					update_plugin_brush()
+				update_plugin_brush()
 			elif event.pressed && event.button_index == BUTTON_RIGHT:
 				right_click_menu.popup()
 				right_click_menu.set_global_position(get_global_mouse_position())

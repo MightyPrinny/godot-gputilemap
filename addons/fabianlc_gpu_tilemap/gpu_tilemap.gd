@@ -15,6 +15,8 @@ export(Dictionary) var autotile_data = {}#Used for autotiling, maps the group_id
 export(Dictionary) var autotile_data_val2key = {}#same as above but with the keys and values swaped, eg: {tile_id:{autotile_ids}}
 export(Dictionary) var autotile_tile_groups = {}#maps a tile_id to a group
 
+enum FlipTile{NotFlipped=0,FlipH = 1,FlipV = 2, FlipBoth = 3}
+
 var map_data:Image
 var tileset_data:Image
 
@@ -44,6 +46,7 @@ func _enter_tree():
 	material = ShaderMaterial.new();
 	shader_mat = material
 	shader_mat.shader = load("res://addons/fabianlc_gpu_tilemap/shaders/tilemap_renderer.shader")
+	shader_mat.set_shader_param("flipMap",preload("res://addons/fabianlc_gpu_tilemap/shaders/tile_flip_map.png"))
 	update_shader()
 	
 	var size
@@ -146,14 +149,27 @@ func put_tile_at_mouse(tilepos,alpha = 255):
 		return
 	put_tile(local_to_cell(get_local_mouse_position()),tilepos,alpha)
 	
-func put_tile(cell,tilepos,alpha = 255,update_map = true, do_locks = true):
+func put_tile(cell,tilepos,alpha = 255,flip=FlipTile.NotFlipped,update_map = true, do_locks = true):
 	if cell.x >= 0 && cell.x < map_size.x && cell.y >= 0 && cell.y < map_size.y:
 		if do_locks:
 			map_data.lock()
 		if plugin != null && plugin.making_action:
 			plugin.add_do_tile_action(cell,map_data.get_pixelv(cell),Color8(tilepos.x,tilepos.y,0,alpha))
 		
-		map_data.set_pixelv(cell,Color8(tilepos.x,tilepos.y,0,alpha))
+		map_data.set_pixelv(cell,Color8(tilepos.x,tilepos.y,flip,alpha))
+		if do_locks:
+			map_data.unlock()
+		if update_map:
+			map.set_data(map_data)
+
+func put_tile_pixel(cell,color,update_map = true,do_locks = true):
+	if cell.x >= 0 && cell.x < map_size.x && cell.y >= 0 && cell.y < map_size.y:
+		if do_locks:
+			map_data.lock()
+		if plugin != null && plugin.making_action:
+			plugin.add_do_tile_action(cell,map_data.get_pixelv(cell),color)
+		
+		map_data.set_pixelv(cell,color)
 		if do_locks:
 			map_data.unlock()
 		if update_map:
