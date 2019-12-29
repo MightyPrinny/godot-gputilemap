@@ -441,7 +441,10 @@ func update_plugin_brush(a=null):
 			y = y + 1
 		y = 0
 		x = x + 1
-	
+	if flip_h.pressed:
+		brush.flip_x()
+	if flip_v.pressed:
+		brush.flip_y()
 	brush.unlock()
 	plugin.brush = brush	
 

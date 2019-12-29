@@ -22,6 +22,7 @@ void fragment()
 	vec2 spriteOffset = floor(tile.xy * 256.0) * tileSize;
 	
 	vec2 spriteCoord = mod(pixelCoord, tileSize);
+	
 	if(tile.b != 0.0)
 	{
 		float flip_id = tile.b*256.0;

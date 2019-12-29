@@ -159,8 +159,8 @@ func _enter_tree():
 	tool_button.add_child(popup_menu)
 	
 	brush_popup = PopupMenu.new()
-	brush_popup.add_item("Flip positions horizontally",FlipBrushH)
-	brush_popup.add_item("Flip positions vertically", FlipBrushV)
+	brush_popup.add_item("Flip horizontally",FlipBrushH)
+	brush_popup.add_item("Flip vertically", FlipBrushV)
 	brush_popup.connect("id_pressed",self,"brush_item_selected")
 	
 	tool_button = ToolButton.new()
@@ -242,12 +242,63 @@ func brush_item_selected(id):
 			flip_brush_v()
 			
 func flip_brush_h():
+	brush.lock()
+	
+	var x = 0
+	var y = 0
+	var w = brush.get_width()
+	var h = brush.get_height()
+	while(y<h):
+		var color = brush.get_pixel(x,y)
+		var flip = int(color.b*255.0)
+		match(flip):
+			0:
+				color.b = 1.0/255.0
+			1:
+				color.b = 0
+			2:
+				color.b = 3.0/255.0
+			3:
+				color.b = 2.0/255.0
+		brush.set_pixel(x,y,color)
+		x += 1
+		if x >= w:
+			x = 0
+			y += 1
+	
+	brush.unlock()
 	brush.flip_x()
 	
 	
+	
 func flip_brush_v():
+	brush.lock()
+	
+	var x = 0
+	var y = 0
+	var w = brush.get_width()
+	var h = brush.get_height()
+	while(y<h):
+		var color = brush.get_pixel(x,y)
+		var flip = int(color.b*255.0)
+		match(flip):
+			0:
+				color.b = 2.0/255.0
+			1:
+				color.b = 3.0/255.0
+			2:
+				color.b = 0
+			3:
+				color.b = 1.0/255.0
+		brush.set_pixel(x,y,color)
+		x += 1
+		if x >= w:
+			x = 0
+			y += 1
+	
+	brush.unlock()
 	brush.flip_y()
-
+	
 func brush_from_selection():
 	if can_access_map():
 		brush = tilemap.brush_from_selection()
