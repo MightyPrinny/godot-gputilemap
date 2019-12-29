@@ -205,8 +205,10 @@ func autotile(tile_pos,group_id):
 	
 	var current_color = tilemap.map_data.get_pixelv(tile_pos)
 	var current_tile = Vector2(int(current_color.r*255),int(current_color.g*255))
-	
+	current_color.b = 0
 	if int(current_color.a) == 1:
+		#Make sure the tile isn't flipped
+		put_tile(tile_pos,current_tile)
 		var full_mask = (high_bits|low_bits)
 		var mask_id = high_bits >> 4
 		
@@ -245,9 +247,13 @@ func update_tile(tile_pos,group_id):
 			low_bits = low_bits | bits
 	
 	var current_color = tilemap.map_data.get_pixelv(tile_pos)
-	var current_tile = Vector2(int(current_color.r*255),int(current_color.g*255))
+	current_color.b = 0
+	
+	var current_tile = Vector2(int(current_color.r*255.0),int(current_color.g*255.0))
 	
 	if int(current_color.a) == 1:
+		#Make sure the tile isn't flipped
+		put_tile(tile_pos,current_tile)
 		var full_mask = (high_bits|low_bits)
 		var mask_id = high_bits >> 4
 		

@@ -176,7 +176,7 @@ func put_tile_pixel(cell,color,update_map = true,do_locks = true):
 			map.set_data(map_data)
 	
 func autotile_put_tile(cell,tilepos):
-	put_tile(cell,tilepos,255,false,false)
+	put_tile(cell,tilepos,255,FlipTile.NotFlipped,false,false)
 	
 func get_tile_at_cell(cell):
 	if map == null:
