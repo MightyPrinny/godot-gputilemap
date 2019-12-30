@@ -1,18 +1,18 @@
 shader_type canvas_item;
 
-const vec2 flipMapSizeInv = vec2(0.25,0.5);
-const vec2 flipOffset = vec2(-1,-1);
+const highp vec2 flipMapSizeInv = vec2(0.25,0.5);
+const highp vec2 flipOffset = vec2(-1,-1);
 
-uniform vec2 viewportSize = vec2(256,240);
-uniform vec2 inverseTileTextureSize = vec2(0.0078125,0.0078125);
-uniform vec2 inverseTileSize = vec2(0.0625,0.0625);
+uniform highp vec2 viewportSize = vec2(256,240);
+uniform highp vec2 inverseTileTextureSize = vec2(0.0078125,0.0078125);
+uniform highp vec2 inverseTileSize = vec2(0.0625,0.0625);
 
-uniform sampler2D tileset;
-uniform sampler2D tilemap;
-uniform sampler2D flipMap;
+uniform highp sampler2D tileset;
+uniform highp sampler2D tilemap;
+uniform highp sampler2D flipMap;
 
-uniform vec2 inverseSpriteTextureSize = vec2(0.0232558139535,0.0294117647059);
-uniform vec2 tileSize = vec2(16,16);
+uniform highp vec2 inverseSpriteTextureSize = vec2(0.0232558139535,0.0294117647059);
+uniform highp vec2 tileSize = vec2(16,16);
 
 void fragment()
 {

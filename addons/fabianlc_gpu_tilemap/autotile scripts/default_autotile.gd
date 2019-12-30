@@ -37,7 +37,7 @@ const mask_to_id ={
 	115:4,123:4,127:4,119:4,#Left
 	255:5,#Center
 	220:6,223:6,222:6,221:6,#Right
-	49:7,51:7,53:7,54:7,55:7,59:7,61:7,57:7,63:7,#Bottom left
+	49:7,51:7,53:7,55:7,59:7,61:7,57:7,63:7,#Bottom left
 	185:8,189:8,187:8,191:8,#Bottom
 	152:9,153:9,154:9,155:9,156:9,157:9,159:9,#Bottom right
 	32:10,33:10,34:10,35:10,36:10,37:10,38:10,40:10,44:10,45:10,46:10,47:10,#HLine left
@@ -62,6 +62,9 @@ const mask_to_id ={
 	195:22,
 	200:22,
 	202:22,
+	203:22,
+	112:23,
+	116:23,
 	120:23,
 	124:23,
 	240:24,
@@ -70,12 +73,15 @@ const mask_to_id ={
 	48:26,
 	50:26,
 	52:26,
+	54:26,
 	56:26,
 	58:26,
 	60:26,
+	62:26,
 	176:27,
 	178:27,
 	180:27,
+	182:27,
 	149:28,
 	151:28,
 	113:29,
@@ -214,9 +220,10 @@ func autotile(tile_pos,group_id):
 		
 		var autotile_id = mask_to_id.get(full_mask,-1)
 		if autotile_id == -1:
+			#print("unknown combination	" + str(full_mask) + "(" + str(bitmask) + ")," + str(autotile_id) + ", "+ str(low_bits) + ", "+ str(high_bits))
 			autotile_id = get_closest_id(full_mask)
-			#if prev_init:
-			#	print("unknown combination	" + str(low_bits|high_bits) + "(" + str(bitmask) + ")," + str(autotile_id) + ", "+ str(low_bits) + ", "+ str(high_bits))
+			
+			
 			if autotile_id == -1:
 				bitmask = high_bits | (low_bits & low_bit_masks[mask_id])
 				autotile_id = mask_to_id.get(bitmask,-1)
