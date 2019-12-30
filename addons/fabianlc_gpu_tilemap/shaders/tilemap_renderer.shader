@@ -16,16 +16,16 @@ uniform highp vec2 tileSize = vec2(16,16);
 
 void fragment()
 {
-	vec2 pixelCoord = (UV * viewportSize);
-	vec2 texCoord = pixelCoord * inverseSpriteTextureSize * inverseTileSize;
-	vec4 tile = texture(tilemap, texCoord);
-	vec2 spriteOffset = floor(tile.xy * 256.0) * tileSize;
+	highp vec2 pixelCoord = (UV * viewportSize);
+	highp vec2 texCoord = pixelCoord * inverseSpriteTextureSize * inverseTileSize;
+	highp vec4 tile = texture(tilemap, texCoord);
+	highp vec2 spriteOffset = floor(tile.xy * 256.0) * tileSize;
 	
-	vec2 spriteCoord = mod(pixelCoord, tileSize);
+	highp vec2 spriteCoord = mod(pixelCoord, tileSize);
 	
 	if(tile.b != 0.0)
 	{
-		float flip_id = tile.b*256.0;
+		highp float flip_id = tile.b*256.0;
 		spriteCoord = spriteCoord*(texture(flipMap,vec2(flip_id,1.0)*flipMapSizeInv).rg*256.0 + flipOffset) + tileSize*(texture(flipMap,vec2(flip_id,0.0)*flipMapSizeInv).rg*256.0);
 	}
 	COLOR = texture(tileset, (spriteOffset + spriteCoord) * inverseTileTextureSize);
