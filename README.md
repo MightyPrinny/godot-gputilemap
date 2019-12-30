@@ -2,6 +2,7 @@ This is a shader based tilemap alternative, tiles have the same width and height
 but be careful, the editor crashes if you expand the image resource on the map property of a GPUTilemap node 
 see https://github.com/godotengine/godot/issues/34482.
 
+This does not work on old mobile GPUs with bad floating point accuracy such as the Mali 400 and Mali 450(https://www.youi.tv/mobile-gpu-floating-point-accuracy-variances/)
 
 To use it you need an ImageTexture as a base for your map, the image data from the original image won't be modified, it will only change on
 the image texture resource.
