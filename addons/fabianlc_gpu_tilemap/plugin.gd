@@ -3,8 +3,9 @@ extends EditorPlugin
 
 
 const EditModePaint = 0
-const EditModeErase = 1
-const EditModeSelect = 2
+const EditModeLine = 1
+const EditModeErase = 2
+const EditModeSelect = 3
 
 const ResizeMap = 0
 const ClearMap = 1
@@ -75,6 +76,7 @@ var copy_shortcut:ShortCut
 var paint_shortcut:ShortCut
 var erase_shortcut:ShortCut
 var select_shortcut:ShortCut
+var line_shortcut:ShortCut
 
 #var ignore_next_click = false
 
@@ -101,6 +103,11 @@ func _init():
 	select_key.scancode = KEY_D
 	select_shortcut = ShortCut.new()
 	select_shortcut.shortcut = select_key
+	
+	var line_key = InputEventKey.new()
+	line_key.scancode = KEY_F
+	line_shortcut = ShortCut.new()
+	line_shortcut.shortcut = line_key
 	
 	print("gputilemap plugin")
 	
@@ -130,11 +137,13 @@ func _enter_tree():
 	toolbar.add_child(autotile_checkbox)
 	
 	paint_mode_option = OptionButton.new()
-	paint_mode_option.add_item("paint",EditModePaint)
+	paint_mode_option.add_item("Paint",EditModePaint)
 	paint_mode_option.get_popup().set_item_shortcut(paint_mode_option.get_item_index(EditModePaint),paint_shortcut)
-	paint_mode_option.add_item("erase",EditModeErase)
+	paint_mode_option.add_item("Line",EditModeLine)
+	paint_mode_option.get_popup().set_item_shortcut(paint_mode_option.get_item_index(EditModeLine),line_shortcut)
+	paint_mode_option.add_item("Erase",EditModeErase)
 	paint_mode_option.get_popup().set_item_shortcut(paint_mode_option.get_item_index(EditModeErase),erase_shortcut)
-	paint_mode_option.add_item("select",EditModeSelect)
+	paint_mode_option.add_item("Select",EditModeSelect)
 	paint_mode_option.get_popup().set_item_shortcut(paint_mode_option.get_item_index(EditModeSelect),select_shortcut)
 	paint_mode_option.connect("item_selected",self,"paint_mode_selected")
 	toolbar.add_child(paint_mode_option)
@@ -366,14 +375,21 @@ func forward_canvas_gui_input(event):
 		var draw = false
 		var mouse_cell_pos = tilemap.local_to_cell(tilemap.get_local_mouse_position())
 		if event is InputEventMouseMotion:
-			if selection_state == NoSelection && mouse_pressed:
-				selection_state = Selecting
-				selection_start_cell = mouse_cell_pos
+			
 			mouse_pos = event.global_position
-			if paint_mode != EditModeSelect || selection_state == NoSelection:
+			if paint_mode == EditModeSelect:
+				if selection_state == NoSelection && mouse_pressed:
+					selection_state = Selecting
+					selection_start_cell = mouse_cell_pos
+				if selection_state == NoSelection:
+					selection_start_cell = mouse_cell_pos
+				if selection_state != Selected:
+					tilemap.set_selection(selection_start_cell,mouse_cell_pos)
+			elif paint_mode != EditModeLine || selection_state == NoSelection:
 				selection_start_cell = mouse_cell_pos
-			if paint_mode != EditModeSelect || selection_state != Selected:
 				tilemap.set_selection(selection_start_cell,mouse_cell_pos)
+			elif paint_mode == EditModeLine:
+				tilemap.set_selection(mouse_cell_pos,mouse_cell_pos)
 			
 			tilemap.draw_editor_selection()
 		elif event is InputEventMouseButton:
@@ -385,10 +401,25 @@ func forward_canvas_gui_input(event):
 							end_undoredo("Paint tiles")
 						elif paint_mode == EditModeErase:
 							end_undoredo("Erase tiles")
-					if selection_state == Selecting:
-						selection_state = Selected
-				else:
 					if paint_mode == EditModeSelect:
+						if selection_state == Selecting:
+							selection_state = Selected
+					elif paint_mode == EditModeLine:
+						if selection_state == Selecting:
+							selection_state = NoSelection
+							begin_undoredo()
+							paint_line_no_overlap(selection_start_cell,mouse_cell_pos,false)
+							end_undoredo("Paint line")
+							
+				else:
+					if paint_mode == EditModeLine:
+						if selection_state == NoSelection:
+							selection_state = Selecting
+							selection_start_cell = mouse_cell_pos
+							tilemap.set_selection(selection_start_cell,selection_start_cell)
+							tilemap.rect_list = [Rect2(selection_start_cell,Vector2(1,1))]
+							tilemap.draw_rect_list()
+					elif paint_mode == EditModeSelect:
 						if selection_state == Selected:
 							selection_state = NoSelection
 							tilemap.set_selection(mouse_cell_pos,mouse_cell_pos)
@@ -436,6 +467,10 @@ func forward_canvas_gui_input(event):
 		elif select_shortcut.is_shortcut(event):
 			paint_mode_option.select(paint_mode_option.get_item_index(EditModeSelect))
 			paint_mode_selected(EditModeSelect)
+			return true
+		elif line_shortcut.is_shortcut(event):
+			paint_mode_option.select(paint_mode_option.get_item_index(EditModeLine))
+			paint_mode_selected(EditModeLine)
 			return true
 		elif paint_shortcut.is_shortcut(event):
 			paint_mode_option.select(paint_mode_option.get_item_index(EditModePaint))
@@ -673,10 +708,20 @@ func save_dialog_confirmed(path,dialog):
 func release_mouse():
 	mouse_pressed = false
 	if making_action:
-		if paint_mode == EditModePaint:
-			end_undoredo("Paint tiles")
-		elif paint_mode == EditModeErase:
-			end_undoredo("Erase tiles")
+		commit_action()
+	if paint_mode == EditModePaint:
+		selection_state = Selected
+	elif paint_mode == EditModeLine:
+		selection_state = NoSelection
+
+func commit_action():
+	match(paint_mode):
+			EditModePaint:
+				end_undoredo("Paint tiles")
+			EditModeLine:
+				end_undoredo("Paint line")
+			EditModeErase:
+				end_undoredo("Erase tiles")
 	
 func clear_map():
 	tilemap.clear_map()
@@ -840,6 +885,63 @@ func paint_line(start,end,erase = false):
 	brush.unlock()
 	tilemap.map_data.unlock()
 	tilemap.map.set_data(tilemap.map_data)
+
+func paint_line_no_overlap(start,end,erase = false):
+	var brw = brush.get_width()
+	var brh = brush.get_height()
+	#end = end-start
+	#start = start-start
+	end = Vector2(floor(end.x/brw),floor(end.y/brh))
+	start = Vector2(floor(start.x/brw),floor(start.y/brh))
+	
+	var x0 = start.x
+	var y0 = start.y
+	var x1 = end.x
+	var y1 = end.y
+	var dx = abs(x1 - x0)
+	var dy = abs(y1 - y0)
+	var sx
+	if (x0 < x1):
+		sx = 1
+	else:
+		sx = -1
+	var sy
+	if (y0 < y1):
+		sy = 1
+	else:
+		sy = -1
+	var err = dx - dy;
+	
+	brush.lock()
+	tilemap.map_data.lock()
+	if !erase:
+		while(true):
+			tilemap.blend_brush(Vector2(x0*brw,y0*brh),brush,false,false)
+			if ((x0 == x1) && (y0 == y1)):
+				break;
+			var e2 = 2*err;
+			if (e2 > -dy):
+				err -= dy;
+				x0  += sx
+			if (e2 < dx):
+				err += dx
+				y0  += sy
+	else:
+		while(true):
+			tilemap.erase_with_brush(Vector2(x0,y0),brush,false,false)
+			if ((x0 == x1) && (y0 == y1)):
+				break;
+			var e2 = 2*err;
+			if (e2 > -dy):
+				err -= dy;
+				x0  += sx
+			if (e2 < dx):
+				err += dx
+				y0  += sy
+		
+	brush.unlock()
+	tilemap.map_data.unlock()
+	tilemap.map.set_data(tilemap.map_data)
    
 
 func make_visible(v):
@@ -861,4 +963,6 @@ func make_visible(v):
 
 func paint_mode_selected(id):
 	release_mouse()
-	paint_mode = clamp(id,0,2)
+	selection_state = NoSelection
+	tilemap.draw_clear()
+	paint_mode = clamp(id,0,3)

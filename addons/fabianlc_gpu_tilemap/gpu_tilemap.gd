@@ -23,6 +23,8 @@ var tileset_data:Image
 var shader_mat:ShaderMaterial
 var draw_editor_selection = false
 
+var rect_list = []
+var draw_rect_list = false
 var cell_start = Vector2()
 var cell_end = Vector2()
 var map_size = Vector2()
@@ -138,11 +140,17 @@ func set_selection(start,end):
 func draw_editor_selection():
 	draw_editor_selection = true
 	drawer.update()
+	
+func draw_rect_list():
+	draw_rect_list = true
+	drawer.update()
 
 func draw_clear():
 	if draw_editor_selection:
 		draw_editor_selection = false
-		drawer.update()
+	if draw_rect_list:
+		draw_rect_list = false
+	drawer.update()
 	
 func put_tile_at_mouse(tilepos,alpha = 255):
 	if !is_instance_valid(map):
@@ -228,7 +236,7 @@ func get_map_region_as_texture(start,end):
 				var col = map_data.get_pixelv(p)
 				if col.a != 0:
 					img.blit_rect(tdata,Rect2(int(col.r*255)*tile_size.x,int(col.g*255)*tile_size.y,tile_size.x,tile_size.y),Vector2(x*tile_size.x,y*tile_size.y))
-								
+					
 			y += 1
 		x += 1	
 		
@@ -638,3 +646,8 @@ func draw_stuff():
 	if draw_editor_selection:
 		var rect = Rect2(cell_start*tile_size,tile_size).expand(cell_end*tile_size+tile_size)
 		drawer.draw_rect(rect,Color(0,0.35,0.7,0.45),true)
+	if draw_rect_list:
+		var rect
+		for c in rect_list:
+			rect = Rect2(c.position*tile_size,c.size*tile_size)
+			drawer.draw_rect(rect,Color(0,0.35,0.7,0.45),true)
