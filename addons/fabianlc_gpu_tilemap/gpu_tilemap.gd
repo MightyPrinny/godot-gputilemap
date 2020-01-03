@@ -14,6 +14,7 @@ export(Dictionary) var tile_data = {}#passed to the instancing script both the k
 export(Dictionary) var autotile_data = {}#Used for autotiling, maps the group_id to a dictionay of auto_tile ids which maps an autotile_id to a tile_id, eg: {group_id:{auto_tile_id:tile_id}}
 export(Dictionary) var autotile_data_val2key = {}#same as above but with the keys and values swaped, eg: {tile_id:{autotile_ids}}
 export(Dictionary) var autotile_tile_groups = {}#maps a tile_id to a group
+export var persistent_map_changes = false#if true map changes persist at runtime even after switching scenes
 
 enum FlipTile{NotFlipped=0,FlipH = 1,FlipV = 2, FlipBoth = 3}
 
@@ -37,11 +38,17 @@ var plugin = null
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	if !Engine.editor_hint:
-		set_process_input(false)
+		if map == null:
+			queue_free()
+		if !persistent_map_changes:
+			set_process_input(false)
+			map = map.duplicate(false)
+			#map_data = map.get_data();
 	else:
 		drawer = Node2D.new()
 		add_child(drawer)
 		drawer.connect("draw",self,"draw_stuff")
+		
 		
 
 func _enter_tree():
