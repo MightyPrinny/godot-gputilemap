@@ -44,6 +44,7 @@ func _ready():
 			set_process_input(false)
 			map = map.duplicate(false)
 			#map_data = map.get_data();
+			update_shader()
 	else:
 		drawer = Node2D.new()
 		add_child(drawer)
