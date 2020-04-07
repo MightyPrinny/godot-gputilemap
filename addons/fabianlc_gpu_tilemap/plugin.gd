@@ -577,9 +577,27 @@ func generate_instances():
 		yield(alert,"popup_hide")
 		alert.queue_free()
 		return
+	
+	var scene_root = get_editor_interface().get_edited_scene_root()
+	
+	var node_visible = true
+	var node_folded = true
+	
+	if tilemap.auto_free_instances_node:
+		var old_node = scene_root.get_node_or_null(tilemap.instances_node_name)
+		if is_instance_valid(old_node):
+			if old_node is CanvasItem:
+				node_visible = old_node.visible
+				node_folded = old_node.is_displayed_folded()
+			old_node.free()
+
 	var new_node = Node2D.new()
-	get_editor_interface().get_edited_scene_root().add_child(new_node)
-	new_node.owner = get_editor_interface().get_edited_scene_root()
+	new_node.name = tilemap.instances_node_name
+	scene_root.add_child(new_node)
+	new_node.owner = scene_root
+	new_node.set_display_folded(node_folded)
+	new_node.visible = node_visible
+	
 	tilemap.generate_instances(new_node)
 
 func export_map():

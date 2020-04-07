@@ -9,9 +9,9 @@ var tileset_size = Vector2(1,1)
 onready var spr = $Sprite
 var ready = false
 var texture = null
+var zoom_level = 1
 
 func _ready():
-	connect("resized",self,"on_resize")
 	set_tex(texture)
 	ready = true
 	
@@ -24,9 +24,11 @@ func set_tex(_texture:Texture):
 		spr.texture = texture
 		update_tieset_size()
 		get_parent().get_parent()._resized()
-		on_resize()
+		set_zoom_level(zoom_level)
+		
 	elif !ready:
 		call_deferred("set_tex",texture)
+	
 	
 	
 func set_selection(start,end):
@@ -58,15 +60,15 @@ func get_cell_poss_at(pos):
 	local = (local/cell_size).floor()
 	return Vector2(clamp(local.x,0,tileset_size.x-1),clamp(local.y,0,tileset_size.y-1))
 	
-func on_resize():
-	if texture == null || spr == null:
-		return
-	var scale = min(get_global_rect().size.y/float(texture.get_height()), get_global_rect().size.x/float(texture.get_width()))
-	spr.scale = Vector2(1,1)*scale
+func set_zoom_level(value):
+	zoom_level = max(floor(value), 1);
+	spr.scale = Vector2(1,1)*zoom_level
+	rect_min_size = spr.transform.basis_xform(spr.get_rect().size)
+	rect_size = rect_min_size
 	
 func _draw():
 	if spr == null || spr.texture == null:
 		return
-	var scale = min(get_global_rect().size.y/float(spr.texture.get_height()), get_global_rect().size.x/float(spr.texture.get_width()))
+	var scale = spr.scale
 	var rect = Rect2(cell_start*cell_size*scale,cell_size*scale).expand(cell_end*cell_size*scale+cell_size*scale)
 	draw_rect(rect,Color.white,false) 

@@ -6,6 +6,8 @@ export var tileset:Texture setget set_tileset_texture
 export var map:ImageTexture setget set_map_texture
 export var tile_size:Vector2 = Vector2(16,16) setget set_tile_size
 export var instancing_script:Script = null#used for instancing objects on the map eg:collision objects
+export var instances_node_name:String = "Collision"
+export var auto_free_instances_node = true
 export var autotile_script:Script = load("res://addons/fabianlc_gpu_tilemap/autotile scripts/default_autotile.gd")
 var autotile_script_instance = null setget set_autotile_script
 var has_autotile_script = false

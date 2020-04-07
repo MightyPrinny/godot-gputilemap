@@ -6,7 +6,8 @@
 [node name="TilePicker" type="VBoxContainer"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-size_flags_stretch_ratio = 0.25
+size_flags_horizontal = 3
+size_flags_vertical = 3
 script = ExtResource( 2 )
 __meta__ = {
 "_edit_use_anchors_": false
@@ -15,6 +16,7 @@ __meta__ = {
 [node name="Label" type="Label" parent="."]
 margin_right = 256.0
 margin_bottom = 14.0
+size_flags_horizontal = 3
 text = "Tileset"
 align = 1
 valign = 1
@@ -23,11 +25,13 @@ valign = 1
 margin_top = 18.0
 margin_right = 256.0
 margin_bottom = 22.0
+size_flags_horizontal = 3
 
 [node name="Options" type="HBoxContainer" parent="."]
 margin_top = 26.0
 margin_right = 256.0
 margin_bottom = 50.0
+size_flags_horizontal = 3
 alignment = 1
 
 [node name="Label2" type="Label" parent="Options"]
@@ -75,6 +79,7 @@ __meta__ = {
 [node name="Tileset" type="Control" parent="ScrollContainer"]
 margin_right = 256.0
 margin_bottom = 186.0
+rect_min_size = Vector2( 1, 1 )
 focus_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3

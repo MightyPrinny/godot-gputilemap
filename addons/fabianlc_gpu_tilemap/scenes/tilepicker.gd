@@ -400,10 +400,6 @@ func _process(delta):
 	scroll_container.scroll_horizontal = hscroll
 
 func _resized():
-	if tileset != null && tileset.spr.texture != null:
-		var tex = tileset.spr.texture
-		if rect_size.x > tex.get_width()*2:
-			rect_size.x = tex.get_width()*2
 	pass	
 
 	
@@ -449,6 +445,14 @@ func update_plugin_brush(a=null):
 	plugin.brush = brush	
 
 func tileset_input(event):
+	if event is InputEventMouseButton:
+		if event.pressed:
+			if event.button_index == BUTTON_WHEEL_UP:
+				tileset.set_zoom_level(tileset.zoom_level + 1)
+			elif event.button_index == BUTTON_WHEEL_DOWN:
+				tileset.set_zoom_level(tileset.zoom_level - 1)
+			accept_event()
+
 	if event is InputEventMouse:
 		var cell = tileset.get_cell_poss_at(event.position)
 		if event is InputEventMouseButton:
@@ -456,13 +460,17 @@ func tileset_input(event):
 				tileset.set_selection(cell,cell)
 				selecting = true
 				selection_start_cell = cell
+				accept_event()
 			elif event.button_index == BUTTON_LEFT && !event.pressed:
 				selecting = false
 				update_plugin_brush()
+				accept_event()
 			elif event.pressed && event.button_index == BUTTON_RIGHT:
 				right_click_menu.popup()
 				right_click_menu.set_global_position(get_global_mouse_position())
+				accept_event()
 		if event is InputEventMouseMotion:
 			if selecting:
 				tileset.set_selection(selection_start_cell,cell)
+				accept_event()
 		
