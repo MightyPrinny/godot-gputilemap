@@ -129,12 +129,12 @@ func save_tile_data_dialog():
 	dialog.popup_exclusive = true
 	dialog.add_filter("*.tiledata")
 	
-	dialog.connect("confirmed",self,"save_tile_data_confirmed",[dialog],CONNECT_DEFERRED)
+	dialog.connect("file_selected",self,"save_tile_data_confirmed",[dialog],CONNECT_DEFERRED)
 	
 	plugin.get_editor_interface().get_base_control().add_child(dialog)
 	dialog.popup_centered_ratio()
 
-func save_tile_data_confirmed(dialog:FileDialog):
+func save_tile_data_confirmed(selected_file, dialog:FileDialog):
 	print("Save confimed")
 	if !dialog.current_path.ends_with(".tiledata"):
 		dialog.current_path += ".tiledata"
@@ -166,12 +166,12 @@ func load_tile_data_dialog():
 	dialog.mode = FileDialog.MODE_OPEN_FILE
 	dialog.popup_exclusive = true
 	dialog.add_filter("*.tiledata")
-	dialog.connect("confirmed",self,"load_tile_data_confirmed",[dialog],CONNECT_DEFERRED)
+	dialog.connect("file_selected",self,"load_tile_data_confirmed",[dialog],CONNECT_DEFERRED)
 	
 	plugin.get_editor_interface().get_base_control().add_child(dialog)
 	dialog.popup_centered_ratio()
 	
-func load_tile_data_confirmed(dialog:FileDialog):
+func load_tile_data_confirmed(selected_file, dialog:FileDialog):
 	var tilemap:GPUTileMap = plugin.tilemap
 	if tilemap == null:
 		printerr("tilemap is null")
@@ -235,7 +235,7 @@ func open_spin_dialog(dialog_name,spin_label_text,dialog_text = ""):
 	plugin.get_editor_interface().get_base_control().add_child(dialog)
 	dialog.popup_centered()
 	dialog.connect("popup_hide",self,"dialog_hide",[dialog])
-	dialog.connect("confirmed",self,"spin_dialog_confirmed",[dialog])
+	dialog.connect("file_selected",self,"spin_dialog_confirmed",[dialog])
 	
 func dialog_hide(dialog):
 	dialog.queue_free()			

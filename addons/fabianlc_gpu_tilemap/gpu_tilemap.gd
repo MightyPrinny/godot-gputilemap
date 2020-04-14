@@ -573,14 +573,14 @@ func autotile_add_id(tile,autotile_id):
 		printerr("the tile doesn't belong to an autotile group add")
 		return
 	
-	var gdata:Dictionary = autotile_data.get(group_id,null)
+	var gdata = autotile_data.get(group_id,null)
 	if gdata == null:
 		gdata = {}
 		autotile_data[group_id] = gdata
 		
 	gdata[autotile_id] = tile
 	
-	var ids:Array = autotile_data_val2key.get(tid,null)
+	var ids = autotile_data_val2key.get(tid,null)
 	if ids == null:
 		ids = []
 		autotile_data_val2key[tid] = ids
@@ -592,7 +592,7 @@ func autotile_remove_id(tile,autotile_id):
 	var group_id = autotile_tile_groups.get(tid,null)
 	if group_id == null:
 		printerr("the tile doesn't belong to an autotile group remove")
-	var gdata:Dictionary = autotile_data.get(group_id,null)
+	var gdata = autotile_data.get(group_id,null)
 	if gdata != null:
 		gdata.erase(autotile_id)
 	
@@ -600,7 +600,7 @@ func autotile_remove_id(tile,autotile_id):
 	gdata = autotile_data_val2key.get(tid,null)
 	if gdata == null:
 		return
-	var ids:Array = gdata.get(group_id,null)
+	var ids = gdata.get(group_id,null)
 	if ids == null:
 		return
 	var pos = ids.find(autotile_id)
