@@ -1,4 +1,4 @@
-This is a shader based tilemap alternative, tiles have the same width and height, maps are stored as image textures, for now the maps are saved in the scene, 
+This is a shader based tilemap alternative, maps are stored as image textures, for now the maps are saved in the scene, 
 but be careful, the editor crashes if you expand the image resource on the map property of a GPUTilemap node 
 see https://github.com/godotengine/godot/issues/34482.
 
