@@ -235,7 +235,7 @@ func open_spin_dialog(dialog_name,spin_label_text,dialog_text = ""):
 	plugin.get_editor_interface().get_base_control().add_child(dialog)
 	dialog.popup_centered()
 	dialog.connect("popup_hide",self,"dialog_hide",[dialog])
-	dialog.connect("file_selected",self,"spin_dialog_confirmed",[dialog])
+	dialog.connect("confirmed",self,"spin_dialog_confirmed",[dialog])
 	
 func dialog_hide(dialog):
 	dialog.queue_free()			
