@@ -37,6 +37,8 @@ var drawer
 var tile_selector = null
 var plugin = null
 
+var single_tile_brush:Image
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	if !Engine.editor_hint:
@@ -46,12 +48,18 @@ func _ready():
 			set_process_input(false)
 			map = map.duplicate(false)
 			#map_data = map.get_data();
+			if map_data != null:
+				map_data.lock()
 			update_shader()
 	else:
 		drawer = Node2D.new()
 		add_child(drawer)
 		drawer.connect("draw",self,"draw_stuff")
 		
+	if has_autotile_script:
+		single_tile_brush = Image.new()
+		single_tile_brush.create(1,1,false,Image.FORMAT_RGBA8)
+		single_tile_brush.lock()
 		
 
 func _enter_tree():
@@ -124,6 +132,7 @@ func set_map_texture(tex:ImageTexture):
 	if map != null:
 		map_size = map.get_size()
 		map_data = map.get_data()
+		map_data.lock()
 	if !is_inside_tree():
 		return
 	update_shader()
@@ -134,6 +143,7 @@ func set_map_texture(tex:ImageTexture):
 	
 func set_cached_map_data(b):
 	map_data = b
+	map_data.lock()
 	set_map_texture(map)
 		
 func set_selection(start,end):
@@ -162,56 +172,81 @@ func draw_clear():
 		draw_rect_list = false
 	drawer.update()
 	
+func update_map_tex():
+	if map == null || map_data == null:
+		return
+	map.set_data(map_data)
+	
+func get_tileset_tile_size() -> Vector2:
+	return (tileset.get_size()/tile_size).floor()
+	
 func put_tile_at_mouse(tilepos,alpha = 255):
 	if !is_instance_valid(map):
 		return
 	put_tile(local_to_cell(get_local_mouse_position()),tilepos,alpha)
 	
-func put_tile(cell,tilepos,alpha = 255,flip=FlipTile.NotFlipped,update_map = true, do_locks = true):
+func erase_tile(cell,update_map = true):
+	put_tile_pixel(cell,Color(0,0,0,0),update_map)
+	
+func put_tile_with_autoile(cell,tilepos,alpha=255,flip=FlipTile.NotFlipped,update_map = true):
+	if has_autotile_script && single_tile_brush != null:
+		single_tile_brush.set_pixel(0,0,Color8(tilepos.x,tilepos.y,flip,1))
+		var prev_do_autotile = do_autotile
+		do_autotile = true
+		blend_brush(cell,single_tile_brush,update_map)
+		do_autotile = prev_do_autotile
+	
+func erase_tile_with_autotile(cell,update_map=true):
+	if has_autotile_script && single_tile_brush != null:
+		single_tile_brush.set_pixel(0,0,Color(0,0,0,1))
+		var prev_do_autotile = do_autotile
+		do_autotile = true
+		erase_with_brush(cell,single_tile_brush,update_map)
+		do_autotile = prev_do_autotile
+	
+func put_tile(cell,tilepos,alpha = 255,flip=FlipTile.NotFlipped,update_map = true):
 	if cell.x >= 0 && cell.x < map_size.x && cell.y >= 0 && cell.y < map_size.y:
-		if do_locks:
-			map_data.lock()
 		if plugin != null && plugin.making_action:
-			plugin.add_do_tile_action(cell,map_data.get_pixelv(cell),Color8(tilepos.x,tilepos.y,0,alpha))
+			plugin.add_do_tile_action(cell,map_data.get_pixelv(cell),Color8(tilepos.x,tilepos.y,flip,alpha))
 		
 		map_data.set_pixelv(cell,Color8(tilepos.x,tilepos.y,flip,alpha))
-		if do_locks:
-			map_data.unlock()
 		if update_map:
 			map.set_data(map_data)
 
-func put_tile_pixel(cell,color,update_map = true,do_locks = true):
+func put_tile_pixel(cell,color,update_map = true):
 	if cell.x >= 0 && cell.x < map_size.x && cell.y >= 0 && cell.y < map_size.y:
-		if do_locks:
-			map_data.lock()
+		#if do_locks:
+			#map_data.lock()
 		if plugin != null && plugin.making_action:
 			plugin.add_do_tile_action(cell,map_data.get_pixelv(cell),color)
 		
 		map_data.set_pixelv(cell,color)
-		if do_locks:
-			map_data.unlock()
+		#if do_locks:
+			#map_data.unlock()
 		if update_map:
 			map.set_data(map_data)
+			
+	
 	
 func autotile_put_tile(cell,tilepos):
-	put_tile(cell,tilepos,255,FlipTile.NotFlipped,false,false)
+	put_tile(cell,tilepos,255,FlipTile.NotFlipped,false)
 	
 func get_tile_at_cell(cell):
 	if map == null:
 		return Vector2(0,0)
-	map_data.lock()
+	#map_data.lock()
 	var t = Vector2()
 	if cell.x >= 0 && cell.x < map_data.get_width() && cell.y >= 0 && cell.y < map_data.get_height():
 		var	c = map_data.get_pixelv(cell)
 		t = Vector2(int(c.r*255),int(c.g*255))
-	map_data.unlock()
+	#map_data.unlock()
 	return t	
 	
 func get_map_region_as_texture(start,end):
 	if map == null || tileset == null:
 		return null
 	
-	map_data.lock()
+	#map_data.lock()
 	
 	var cs = Vector2(min(start.x,end.x),min(start.y,end.y))
 	var ce = Vector2(max(start.x,end.x),max(start.y,end.y))
@@ -250,16 +285,16 @@ func get_map_region_as_texture(start,end):
 			y += 1
 		x += 1	
 		
-	img.unlock()
-	map_data.unlock()
-	tdata.unlock()
+	#img.unlock()
+	#map_data.unlock()
+	#tdata.unlock()
 	tex.create_from_image(img,0)
 	return tex
 	
 #Brush must be locked
 func erase_with_brush(cell,brush:Image,update_map = true,do_locks = true):
-	if do_locks:
-		map_data.lock()
+	#if do_locks:
+		#map_data.lock()
 	
 	var x = 0
 	var y = 0
@@ -294,8 +329,8 @@ func erase_with_brush(cell,brush:Image,update_map = true,do_locks = true):
 							autotile_script_instance.autotile(p,gid)
 			y += 1
 		x+= 1
-	if do_locks:
-		map_data.unlock()
+	#if do_locks:
+		#map_data.unlock()
 	if(update_map):
 		map.set_data(map_data)
 	
@@ -305,7 +340,7 @@ func brush_from_selection():
 	var cell_rect = Rect2(cell_start,Vector2(1,1)).expand(cell_end+Vector2(1,1))
 	var cell = cell_rect.position
 
-	map_data.lock()
+	#map_data.lock()
 	
 	
 	var x = 0
@@ -329,13 +364,13 @@ func brush_from_selection():
 			y += 1
 		x+= 1
 	
-	brush.unlock()
-	map_data.unlock()
+	#brush.unlock()
+	#map_data.unlock()
 	return brush
 	
 func erase_selection():
 	var cell_rect = Rect2(cell_start,Vector2(1,1)).expand(cell_end+Vector2(1,1))
-	map_data.lock()
+	#map_data.lock()
 	
 	var x = 0
 	var y = 0
@@ -368,13 +403,10 @@ func erase_selection():
 			y += 1
 		x+= 1
 	
-	map_data.unlock()
+	#map_data.unlock()
 	map.set_data(map_data)
 	
-func blend_brush(cell,brush:Image,update_map = true,do_locks = true):
-	if do_locks:
-		map_data.lock()
-	
+func blend_brush(cell,brush:Image,update_map = true):
 	var x = 0
 	var y = 0
 	var w = brush.get_width()
@@ -418,8 +450,7 @@ func blend_brush(cell,brush:Image,update_map = true,do_locks = true):
 			var gid = autotile_update_pending[_tile]
 			if gid != null:
 				autotile_script_instance.autotile(_tile,gid)
-	if do_locks:
-		map_data.unlock()
+				
 	if update_map:
 		map.set_data(map_data)
 	
@@ -429,6 +460,7 @@ func clear_map():
 	var data = Image.new()
 	data.create(map.get_width(),map.get_height(),false,map.get_data().get_format())
 	map_data = data
+	map_data.lock()
 	map.set_data(data)
 	
 func delete_tile_at_mouse():
@@ -448,7 +480,7 @@ func generate_instances(parent):
 	var ownr = parent.get_parent()
 	var factory = instancing_script.new() as Reference
 
-	map_data.lock()
+	#map_data.lock()
 	
 	var x = 0
 	var y = 0
@@ -554,7 +586,7 @@ func generate_instances(parent):
 			x += 1
 		y += 1
 	
-	map_data.unlock()
+	#map_data.unlock()
 	
 func tile_get_id(tile:Vector2):
 	var tst_w = int(tileset_data.get_width()/tile_size.x)

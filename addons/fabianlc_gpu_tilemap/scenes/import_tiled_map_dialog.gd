@@ -141,7 +141,7 @@ func on_confirm():
 			if y >= mh:
 				break
 		
-	mdata.unlock()
+	#mdata.unlock()
 	if mdata.is_empty():
 		printerr("data is empty")
 		return

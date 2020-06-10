@@ -251,7 +251,7 @@ func brush_item_selected(id):
 			flip_brush_v()
 			
 func flip_brush_h():
-	brush.lock()
+	#brush.lock()
 	
 	var x = 0
 	var y = 0
@@ -275,13 +275,13 @@ func flip_brush_h():
 			x = 0
 			y += 1
 	
-	brush.unlock()
+	#brush.unlock()
 	brush.flip_x()
 	
 	
 	
 func flip_brush_v():
-	brush.lock()
+	#brush.lock()
 	
 	var x = 0
 	var y = 0
@@ -305,12 +305,13 @@ func flip_brush_v():
 			x = 0
 			y += 1
 	
-	brush.unlock()
+	#brush.unlock()
 	brush.flip_y()
 	
 func brush_from_selection():
 	if can_access_map():
 		brush = tilemap.brush_from_selection()
+		brush.lock()
 		print("Copy to brush")
 
 func _exit_tree():
@@ -434,9 +435,9 @@ func forward_canvas_gui_input(event):
 				if mouse_cell_pos != prev_mouse_cell_pos:
 					paint_line(prev_mouse_cell_pos,mouse_cell_pos,true)
 				else:
-					brush.lock()
+					#brush.lock()
 					tilemap.erase_with_brush(mouse_cell_pos,brush)
-					brush.unlock()
+					#brush.unlock()
 				
 			elif paint_mode == EditModePaint:
 				if !making_action:
@@ -444,9 +445,9 @@ func forward_canvas_gui_input(event):
 				if mouse_cell_pos != prev_mouse_cell_pos:
 					paint_line(prev_mouse_cell_pos,mouse_cell_pos,false)
 				else:
-					brush.lock()
+					#brush.lock()
 					tilemap.blend_brush(mouse_cell_pos,brush)
-					brush.unlock()
+					#brush.unlock()
 				
 			prev_mouse_cell_pos = tilemap.local_to_cell(tilemap.get_local_mouse_position())
 			return true
@@ -496,10 +497,10 @@ func do_tile_action(tile_actions):
 		return
 	print("do")
 	var vals = tile_actions.values()
-	tilemap.map_data.lock()
+	#tilemap.map_data.lock()
 	for action in vals:
-		tilemap.put_tile_pixel(action.cell,action.newc,false,false)
-	tilemap.map_data.unlock()
+		tilemap.put_tile_pixel(action.cell,action.newc,false)
+	#tilemap.map_data.unlock()
 	tilemap.map.set_data(tilemap.map_data)
 	
 func undo_tile_action(tile_actions):
@@ -507,10 +508,10 @@ func undo_tile_action(tile_actions):
 		return
 	print("undo")
 	var vals = tile_actions.values()
-	tilemap.map_data.lock()
+	#tilemap.map_data.lock()
 	for action in vals:
-		tilemap.put_tile_pixel(action.cell,action.prevc,false,false)
-	tilemap.map_data.unlock()
+		tilemap.put_tile_pixel(action.cell,action.prevc,false)
+	#tilemap.map_data.unlock()
 	tilemap.map.set_data(tilemap.map_data)
 	
 func begin_undoredo():
@@ -687,6 +688,7 @@ func load_brush():
 			printerr(err)
 		else:
 			brush = img
+			brush.lock()
 	dialog.queue_free()
 	
 func load_map():
@@ -800,7 +802,7 @@ func resize_map():
 	var prev_rect = tilemap.get_rect()
 	img.create(w,h,false,Image.FORMAT_RGBA8)
 	img.lock()
-	prev_img.lock()
+	#prev_img.lock()
 	var x = 0
 	var y = 0
 	var prev_tex_size = tilemap.map.get_size()
@@ -826,8 +828,8 @@ func resize_map():
 	
 	img.blit_rect(prev_img,src_rect,dest_pos)
 		
-	prev_img.unlock()
-	img.unlock()
+	#prev_img.unlock()
+	#img.unlock()
 	
 	var tex = ImageTexture.new()
 	tex.create_from_image(img,0)
@@ -873,11 +875,11 @@ func paint_line(start,end,erase = false):
 		sy = -1
 	var err = dx - dy;
 	
-	brush.lock()
-	tilemap.map_data.lock()
+	#brush.lock()
+	#tilemap.map_data.lock()
 	if !erase:
 		while(true):
-			tilemap.blend_brush(Vector2(x0,y0),brush,false,false)
+			tilemap.blend_brush(Vector2(x0,y0),brush,false)
 			if ((x0 == x1) && (y0 == y1)):
 				break;
 			var e2 = 2*err;
@@ -889,7 +891,7 @@ func paint_line(start,end,erase = false):
 				y0  += sy
 	else:
 		while(true):
-			tilemap.erase_with_brush(Vector2(x0,y0),brush,false,false)
+			tilemap.erase_with_brush(Vector2(x0,y0),brush,false)
 			if ((x0 == x1) && (y0 == y1)):
 				break;
 			var e2 = 2*err;
@@ -900,8 +902,8 @@ func paint_line(start,end,erase = false):
 				err += dx
 				y0  += sy
 		
-	brush.unlock()
-	tilemap.map_data.unlock()
+	#brush.unlock()
+	#tilemap.map_data.unlock()
 	tilemap.map.set_data(tilemap.map_data)
 
 func paint_line_no_overlap(start,end,erase = false):
@@ -930,11 +932,11 @@ func paint_line_no_overlap(start,end,erase = false):
 		sy = -1
 	var err = dx - dy;
 	
-	brush.lock()
-	tilemap.map_data.lock()
+	#brush.lock()
+	#tilemap.map_data.lock()
 	if !erase:
 		while(true):
-			tilemap.blend_brush(Vector2(x0*brw,y0*brh),brush,false,false)
+			tilemap.blend_brush(Vector2(x0*brw,y0*brh),brush,false)
 			if ((x0 == x1) && (y0 == y1)):
 				break;
 			var e2 = 2*err;
@@ -946,7 +948,7 @@ func paint_line_no_overlap(start,end,erase = false):
 				y0  += sy
 	else:
 		while(true):
-			tilemap.erase_with_brush(Vector2(x0,y0),brush,false,false)
+			tilemap.erase_with_brush(Vector2(x0,y0),brush,false)
 			if ((x0 == x1) && (y0 == y1)):
 				break;
 			var e2 = 2*err;
@@ -957,8 +959,8 @@ func paint_line_no_overlap(start,end,erase = false):
 				err += dx
 				y0  += sy
 		
-	brush.unlock()
-	tilemap.map_data.unlock()
+	#brush.unlock()
+	#tilemap.map_data.unlock()
 	tilemap.map.set_data(tilemap.map_data)
    
 

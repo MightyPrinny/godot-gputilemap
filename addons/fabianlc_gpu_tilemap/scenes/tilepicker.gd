@@ -442,7 +442,8 @@ func update_plugin_brush(a=null):
 	if flip_v.pressed:
 		brush.flip_y()
 	brush.unlock()
-	plugin.brush = brush	
+	plugin.brush = brush
+	plugin.brush.lock()	
 
 func tileset_input(event):
 	if event is InputEventMouseButton:

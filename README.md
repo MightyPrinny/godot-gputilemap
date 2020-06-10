@@ -13,6 +13,7 @@ older devices might not support bigger textures, however you can add another til
 
 The maximum tileset size is 256x256(65536) tiles, this should be enough in most cases.
 
+Now the tilemap data is automatically locked and it's never unlocked so it can always be modified without any lock for better editing performance.
 
 Performance
 
