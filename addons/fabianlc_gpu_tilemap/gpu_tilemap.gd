@@ -547,9 +547,9 @@ func generate_instances(parent):
 							
 							var childs = node.get_children()
 							node.owner = ownr
-							for c in childs:
-								if c.owner == null:
-									c.owner = ownr
+							for child in childs:
+								if child.owner == null:
+									child.owner = ownr
 							
 			x += 1
 		y += 1
