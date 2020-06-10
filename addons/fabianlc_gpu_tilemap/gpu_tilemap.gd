@@ -190,7 +190,6 @@ func erase_tile(cell,update_map = true):
 	
 func put_tile_with_autoile(cell,tilepos,flip=FlipTile.NotFlipped,update_map = true):
 	if has_autotile_script && single_tile_brush != null:
-		print("put tile autotile")
 		single_tile_brush.set_pixel(0,0,Color8(tilepos.x,tilepos.y,flip,255))
 		var prev_do_autotile = do_autotile
 		do_autotile = true
