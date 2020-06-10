@@ -188,9 +188,10 @@ func put_tile_at_mouse(tilepos,alpha = 255):
 func erase_tile(cell,update_map = true):
 	put_tile_pixel(cell,Color(0,0,0,0),update_map)
 	
-func put_tile_with_autoile(cell,tilepos,alpha=255,flip=FlipTile.NotFlipped,update_map = true):
+func put_tile_with_autoile(cell,tilepos,flip=FlipTile.NotFlipped,update_map = true):
 	if has_autotile_script && single_tile_brush != null:
-		single_tile_brush.set_pixel(0,0,Color8(tilepos.x,tilepos.y,flip,1))
+		print("put tile autotile")
+		single_tile_brush.set_pixel(0,0,Color8(tilepos.x,tilepos.y,flip,255))
 		var prev_do_autotile = do_autotile
 		do_autotile = true
 		blend_brush(cell,single_tile_brush,update_map)
@@ -225,8 +226,6 @@ func put_tile_pixel(cell,color,update_map = true):
 			#map_data.unlock()
 		if update_map:
 			map.set_data(map_data)
-			
-	
 	
 func autotile_put_tile(cell,tilepos):
 	put_tile(cell,tilepos,255,FlipTile.NotFlipped,false)
