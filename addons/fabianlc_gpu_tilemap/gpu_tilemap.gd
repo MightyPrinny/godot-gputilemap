@@ -180,11 +180,6 @@ func update_map_tex():
 func get_tileset_tile_size() -> Vector2:
 	return (tileset.get_size()/tile_size).floor()
 	
-func put_tile_at_mouse(tilepos,alpha = 255):
-	if !is_instance_valid(map):
-		return
-	put_tile(local_to_cell(get_local_mouse_position()),tilepos,alpha)
-	
 func erase_tile(cell,update_map = true):
 	put_tile_pixel(cell,Color(0,0,0,0),update_map)
 	
@@ -204,12 +199,12 @@ func erase_tile_with_autotile(cell,update_map=true):
 		erase_with_brush(cell,single_tile_brush,update_map)
 		do_autotile = prev_do_autotile
 	
-func put_tile(cell,tilepos,alpha = 255,flip=FlipTile.NotFlipped,update_map = true):
+func put_tile(cell,tilepos,flip=FlipTile.NotFlipped,update_map = true):
 	if cell.x >= 0 && cell.x < map_size.x && cell.y >= 0 && cell.y < map_size.y:
 		if plugin != null && plugin.making_action:
-			plugin.add_do_tile_action(cell,map_data.get_pixelv(cell),Color8(tilepos.x,tilepos.y,flip,alpha))
+			plugin.add_do_tile_action(cell,map_data.get_pixelv(cell),Color8(tilepos.x,tilepos.y,flip,255))
 		
-		map_data.set_pixelv(cell,Color8(tilepos.x,tilepos.y,flip,alpha))
+		map_data.set_pixelv(cell,Color8(tilepos.x,tilepos.y,flip,255))
 		if update_map:
 			map.set_data(map_data)
 
@@ -227,7 +222,7 @@ func put_tile_pixel(cell,color,update_map = true):
 			map.set_data(map_data)
 	
 func autotile_put_tile(cell,tilepos):
-	put_tile(cell,tilepos,255,FlipTile.NotFlipped,false)
+	put_tile(cell,tilepos,FlipTile.NotFlipped,false)
 	
 func get_tile_at_cell(cell):
 	if map == null:
@@ -460,11 +455,6 @@ func clear_map():
 	map_data = data
 	map_data.lock()
 	map.set_data(data)
-	
-func delete_tile_at_mouse():
-	if !is_instance_valid(map):
-		return
-	put_tile_at_mouse(Vector2(),0)
 	
 func local_to_cell(global_pos):
 	if map == null:
